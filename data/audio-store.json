@@ -1,0 +1,29 @@
+{
+  "32ef4cd1-7475-4d70-9831-68e7544eac6d": {
+    "id": "32ef4cd1-7475-4d70-9831-68e7544eac6d",
+    "locationKey": "blue_test_clock_slow",
+    "version": 1,
+    "scriptText": "Clock Tick 60 BPM",
+    "voice": "System",
+    "model": "generated",
+    "createdAt": "2026-08-08T09:48:05.793Z"
+  },
+  "10fc9f8b-ec05-48e6-a2f8-7670daf946b9": {
+    "id": "10fc9f8b-ec05-48e6-a2f8-7670daf946b9",
+    "locationKey": "blue_test_clock_medium",
+    "version": 1,
+    "scriptText": "Clock Tick 120 BPM",
+    "voice": "System",
+    "model": "generated",
+    "createdAt": "2026-08-08T09:48:05.800Z"
+  },
+  "15699707-f0e5-4f11-9ae4-c40ee56241e6": {
+    "id": "15699707-f0e5-4f11-9ae4-c40ee56241e6",
+    "locationKey": "blue_test_clock_urgent",
+    "version": 1,
+    "scriptText": "Clock Tick 240 BPM",
+    "voice": "System",
+    "model": "generated",
+    "createdAt": "2026-08-08T09:48:05.800Z"
+  }
+}

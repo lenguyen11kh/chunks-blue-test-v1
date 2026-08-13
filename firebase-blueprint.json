@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "Learner": {
+      "title": "Blue Test Learner",
+      "description": "Learner profile for the Blue Test assessment platform",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "dateOfBirth": { "type": "string" },
+        "gender": { "type": "string" },
+        "classGroup": { "type": "string", "maxLength": 50 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "Assignment": {
+      "title": "Blue Test Assignment",
+      "description": "Test package assignment for a learner",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "learnerId": { "type": "string" },
+        "packageCode": { "type": "string" },
+        "packageName": { "type": "string" },
+        "status": { "type": "string" },
+        "currentSessionNumber": { "type": "number" },
+        "currentGlobalOrder": { "type": "number" },
+        "startedAt": { "type": "string" },
+        "completedAt": { "type": "string" }
+      },
+      "required": ["id", "learnerId", "packageCode"]
+    },
+    "Attempt": {
+      "title": "Blue Test Question Attempt",
+      "description": "Recorded timing and color result for a question attempt",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "assignmentId": { "type": "string" },
+        "learnerId": { "type": "string" },
+        "globalQuestionOrder": { "type": "number" },
+        "sessionNumber": { "type": "number" },
+        "sessionQuestionOrder": { "type": "number" },
+        "effectiveColor": { "type": "string" },
+        "stoppedAtChallengeIndex": { "type": "number" },
+        "durationSeconds": { "type": "number" },
+        "completedAt": { "type": "string" }
+      },
+      "required": ["id", "assignmentId", "globalQuestionOrder"]
+    }
+  },
+  "firestore": {
+    "/blue_test_learners/{learnerId}": {
+      "schema": { "$ref": "#/entities/Learner" },
+      "description": "Collection of learner profiles"
+    },
+    "/blue_test_assignments/{assignmentId}": {
+      "schema": { "$ref": "#/entities/Assignment" },
+      "description": "Collection of test package assignments"
+    },
+    "/blue_test_attempts/{attemptId}": {
+      "schema": { "$ref": "#/entities/Attempt" },
+      "description": "Collection of question attempts"
+    }
+  }
+}

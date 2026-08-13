@@ -1,0 +1,8 @@
+{
+  "name": "Remix Chunks LMS - Blue Test Platform",
+  "description": "Chunks LMS 1-1 Testing Platform featuring Green Test, Red Test, and the standalone Blue Test 7-Color Timing Engine",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

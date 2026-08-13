@@ -1,0 +1,164 @@
+{
+  "clock-blue_test_clock_slow-opt1": {
+    "id": "clock-blue_test_clock_slow-opt1",
+    "locationKey": "blue_test_clock_slow",
+    "version": 1,
+    "scriptText": "Option 1: Classic Woodblock Tick - Slow (60 BPM)",
+    "voice": "Clock Sound (woodblock)",
+    "model": "WebAudio Synth PCM",
+    "createdAt": "2026-08-11T13:32:15.506Z"
+  },
+  "clock-blue_test_clock_slow-opt2": {
+    "id": "clock-blue_test_clock_slow-opt2",
+    "locationKey": "blue_test_clock_slow",
+    "version": 2,
+    "scriptText": "Option 2: Digital Quartz Beep - Slow (60 BPM)",
+    "voice": "Clock Sound (digital)",
+    "model": "WebAudio Synth PCM",
+    "createdAt": "2026-08-11T13:32:15.514Z"
+  },
+  "clock-blue_test_clock_slow-opt3": {
+    "id": "clock-blue_test_clock_slow-opt3",
+    "locationKey": "blue_test_clock_slow",
+    "version": 3,
+    "scriptText": "Option 3: Soft Pendulum Chime - Slow (60 BPM)",
+    "voice": "Clock Sound (pendulum)",
+    "model": "WebAudio Synth PCM",
+    "createdAt": "2026-08-11T13:32:15.522Z"
+  },
+  "clock-blue_test_clock_medium-opt1": {
+    "id": "clock-blue_test_clock_medium-opt1",
+    "locationKey": "blue_test_clock_medium",
+    "version": 1,
+    "scriptText": "Option 1: Classic Woodblock Tick - Medium (120 BPM)",
+    "voice": "Clock Sound (woodblock)",
+    "model": "WebAudio Synth PCM",
+    "createdAt": "2026-08-11T13:32:15.524Z"
+  },
+  "clock-blue_test_clock_medium-opt2": {
+    "id": "clock-blue_test_clock_medium-opt2",
+    "locationKey": "blue_test_clock_medium",
+    "version": 2,
+    "scriptText": "Option 2: Digital Quartz Beep - Medium (120 BPM)",
+    "voice": "Clock Sound (digital)",
+    "model": "WebAudio Synth PCM",
+    "createdAt": "2026-08-11T13:32:15.525Z"
+  },
+  "clock-blue_test_clock_medium-opt3": {
+    "id": "clock-blue_test_clock_medium-opt3",
+    "locationKey": "blue_test_clock_medium",
+    "version": 3,
+    "scriptText": "Option 3: Soft Pendulum Chime - Medium (120 BPM)",
+    "voice": "Clock Sound (pendulum)",
+    "model": "WebAudio Synth PCM",
+    "createdAt": "2026-08-11T13:32:15.526Z"
+  },
+  "clock-blue_test_clock_urgent-opt1": {
+    "id": "clock-blue_test_clock_urgent-opt1",
+    "locationKey": "blue_test_clock_urgent",
+    "version": 1,
+    "scriptText": "Option 1: Classic Woodblock Tick - Urgent (240 BPM)",
+    "voice": "Clock Sound (woodblock)",
+    "model": "WebAudio Synth PCM",
+    "createdAt": "2026-08-11T13:32:15.529Z"
+  },
+  "clock-blue_test_clock_urgent-opt2": {
+    "id": "clock-blue_test_clock_urgent-opt2",
+    "locationKey": "blue_test_clock_urgent",
+    "version": 2,
+    "scriptText": "Option 2: Digital Quartz Beep - Urgent (240 BPM)",
+    "voice": "Clock Sound (digital)",
+    "model": "WebAudio Synth PCM",
+    "createdAt": "2026-08-11T13:32:15.531Z"
+  },
+  "clock-blue_test_clock_urgent-opt3": {
+    "id": "clock-blue_test_clock_urgent-opt3",
+    "locationKey": "blue_test_clock_urgent",
+    "version": 3,
+    "scriptText": "Option 3: Soft Pendulum Chime - Urgent (240 BPM)",
+    "voice": "Clock Sound (pendulum)",
+    "model": "WebAudio Synth PCM",
+    "createdAt": "2026-08-11T13:32:15.534Z"
+  },
+  "tts-pkg_end-v1-1786458303203": {
+    "id": "tts-pkg_end-v1-1786458303203",
+    "locationKey": "pkg_end",
+    "version": 1,
+    "scriptText": "This is the end of CHUNKS Test No. 3. After the test, the test taker will receive the result verbally from the CiC. A digital copy of the official result, including the test taker's ID picture, will be sent directly to the registered email address within 24 hours. Thank you for completing the Blue Test with us.",
+    "voice": "Kore",
+    "model": "gemini-3.1-flash-tts-preview",
+    "createdAt": "2026-08-11T14:25:03.203Z"
+  },
+  "tts-session_3_intro-v1-1786459227469": {
+    "id": "tts-session_3_intro-v1-1786459227469",
+    "locationKey": "session_3_intro",
+    "version": 1,
+    "scriptText": "Session 3 – Magnet – M.C.T 6.4 seconds",
+    "voice": "Kore",
+    "model": "gemini-3.1-flash-tts-preview",
+    "createdAt": "2026-08-11T14:40:27.469Z"
+  },
+  "tts-session_1_intro-v1-1786459227990": {
+    "id": "tts-session_1_intro-v1-1786459227990",
+    "locationKey": "session_1_intro",
+    "version": 1,
+    "scriptText": "Session 1 – Marker – M.C.T 1.86 seconds (aka CHUNKS CONSTANT)",
+    "voice": "Kore",
+    "model": "gemini-3.1-flash-tts-preview",
+    "createdAt": "2026-08-11T14:40:27.990Z"
+  },
+  "tts-session_2_intro-v1-1786459229285": {
+    "id": "tts-session_2_intro-v1-1786459229285",
+    "locationKey": "session_2_intro",
+    "version": 1,
+    "scriptText": "Session 2 – Chair – M.C.T 3.5 seconds",
+    "voice": "Kore",
+    "model": "gemini-3.1-flash-tts-preview",
+    "createdAt": "2026-08-11T14:40:29.285Z"
+  },
+  "tts-session_4_intro-v1-1786459241200": {
+    "id": "tts-session_4_intro-v1-1786459241200",
+    "locationKey": "session_4_intro",
+    "version": 1,
+    "scriptText": "Session 4 – Cup – M.C.T 12 seconds",
+    "voice": "Kore",
+    "model": "gemini-3.1-flash-tts-preview",
+    "createdAt": "2026-08-11T14:40:41.200Z"
+  },
+  "tts-session_6_intro-v1-1786459312234": {
+    "id": "tts-session_6_intro-v1-1786459312234",
+    "locationKey": "session_6_intro",
+    "version": 1,
+    "scriptText": "Session 6 – Book – M.C.T 41.4 seconds",
+    "voice": "Kore",
+    "model": "gemini-3.1-flash-tts-preview",
+    "createdAt": "2026-08-11T14:41:52.234Z"
+  },
+  "tts-session_7_intro-v1-1786459313553": {
+    "id": "tts-session_7_intro-v1-1786459313553",
+    "locationKey": "session_7_intro",
+    "version": 1,
+    "scriptText": "Session 7 – Person – M.C.T 77 seconds (aka CHUNKS GATE)",
+    "voice": "Kore",
+    "model": "gemini-3.1-flash-tts-preview",
+    "createdAt": "2026-08-11T14:41:53.553Z"
+  },
+  "tts-blue_test_challenge_01-v1-1786459346210": {
+    "id": "tts-blue_test_challenge_01-v1-1786459346210",
+    "locationKey": "blue_test_challenge_01",
+    "version": 1,
+    "scriptText": "Challenge one. CHUNKS NUMBER: ONE. T C T: 0.3 seconds. Get ready.",
+    "voice": "Kore",
+    "model": "gemini-3.1-flash-tts-preview",
+    "createdAt": "2026-08-11T14:42:26.210Z"
+  },
+  "tts-blue_test_challenge_02-v1-1786459360321": {
+    "id": "tts-blue_test_challenge_02-v1-1786459360321",
+    "locationKey": "blue_test_challenge_02",
+    "version": 1,
+    "scriptText": "Challenge two. CHUNKS NUMBER: ONE. T C T: 0.5 seconds. Get ready.",
+    "voice": "Kore",
+    "model": "gemini-3.1-flash-tts-preview",
+    "createdAt": "2026-08-11T14:42:40.321Z"
+  }
+}

@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Catch-all default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Connection test document
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+
+    // Blue Test collections
+    match /blue_test_learners/{learnerId} {
+      allow read, write: if true;
+    }
+
+    match /blue_test_assignments/{assignmentId} {
+      allow read, write: if true;
+    }
+
+    match /blue_test_attempts/{attemptId} {
+      allow read, write: if true;
+    }
+
+    match /blue_test_audio_settings/{settingId} {
+      allow read, write: if true;
+    }
+
+    match /blue_test_audio_versions/{versionId} {
+      allow read, write: if true;
+    }
+
+    match /blue_test_audit_events/{eventId} {
+      allow read, write: if true;
+    }
+
+    match /blue_test_runs/{runId} {
+      allow read, write: if true;
+    }
+  }
+}
