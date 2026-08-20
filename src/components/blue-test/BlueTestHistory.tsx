@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BlueAssignment } from '../../types/blue-test';
+import { BlueAssignment, BlueTestMode } from '../../types/blue-test';
 import { BlueTestStorageAdapter } from '../../persistence/blue-test-storage';
 import {
   calculatePercentIMetrics,
@@ -23,10 +23,15 @@ import {
   Grid,
   X,
   Maximize2,
+  Anchor,
+  ShieldAlert,
 } from 'lucide-react';
 
 interface BlueTestHistoryProps {
-  onSelectAssignment: (assignment: BlueAssignment, targetView: 'room' | 'analysis') => void;
+  onSelectAssignment: (
+    assignment: BlueAssignment,
+    targetView: 'room' | 'analysis' | 'captain_room' | 'captain_analysis'
+  ) => void;
 }
 
 export const BlueTestHistory: React.FC<BlueTestHistoryProps> = ({ onSelectAssignment }) => {
@@ -38,6 +43,7 @@ export const BlueTestHistory: React.FC<BlueTestHistoryProps> = ({ onSelectAssign
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLearnerFilter, setSelectedLearnerFilter] = useState<string>('all');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all');
+  const [selectedModeFilter, setSelectedModeFilter] = useState<string>('all');
 
   // Deletion modals & Matrix modal state
   const [deletingAssignment, setDeletingAssignment] = useState<BlueAssignment | null>(null);
@@ -68,6 +74,7 @@ export const BlueTestHistory: React.FC<BlueTestHistoryProps> = ({ onSelectAssign
     const learner = learnerMap.get(ass.learnerId);
     if (selectedLearnerFilter !== 'all' && ass.learnerId !== selectedLearnerFilter) return false;
     if (selectedStatusFilter !== 'all' && ass.status !== selectedStatusFilter) return false;
+    if (selectedModeFilter !== 'all' && (ass.testMode || 'standard') !== selectedModeFilter) return false;
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -139,6 +146,17 @@ export const BlueTestHistory: React.FC<BlueTestHistoryProps> = ({ onSelectAssign
             ))}
           </select>
 
+          {/* Mode Filter */}
+          <select
+            value={selectedModeFilter}
+            onChange={(e) => setSelectedModeFilter(e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Test Modes</option>
+            <option value="standard">🔵 Standard Test Room (%i)</option>
+            <option value="captain">⚓ Captain Test Room (CT)</option>
+          </select>
+
           {/* Status Filter */}
           <select
             value={selectedStatusFilter}
@@ -182,9 +200,22 @@ export const BlueTestHistory: React.FC<BlueTestHistoryProps> = ({ onSelectAssign
                 <div className="flex items-center gap-4">
                   <LearnerAvatar learner={learner} size="md" />
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-extrabold text-sm text-slate-900">{learner.name}</span>
                       <span className="text-xs text-slate-500 font-mono">({learner.code})</span>
+
+                      {/* Mode Badge */}
+                      {ass.testMode === 'captain' ? (
+                        <span className="px-2.5 py-0.5 bg-purple-100 text-purple-800 text-[10px] font-extrabold rounded-full flex items-center gap-1 border border-purple-200">
+                          <Anchor className="w-3 h-3 text-purple-600" /> Captain Test
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-extrabold rounded-full flex items-center gap-1 border border-blue-200">
+                          <Play className="w-3 h-3 text-blue-600 fill-current" /> Standard Test
+                        </span>
+                      )}
+
+                      {/* Status Badge */}
                       {isCompleted ? (
                         <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded-full flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3" /> Completed
@@ -220,13 +251,13 @@ export const BlueTestHistory: React.FC<BlueTestHistoryProps> = ({ onSelectAssign
                     </span>
                   </div>
 
-                  {/* %CPD Display (Ocean Blue Theme) */}
+                  {/* %CPD Display */}
                   <div
                     className="text-right cursor-help"
                     title="% MSE challenges ultimately managed (% Challenges Cleared ÷ 49)"
                   >
-                    <span className="text-[10px] uppercase font-bold text-blue-500 block">%CPD</span>
-                    <span className="text-sm font-black text-blue-600 font-mono">
+                    <span className="text-[10px] uppercase font-bold text-purple-600 block">%CPD</span>
+                    <span className="text-sm font-black text-purple-700 font-mono">
                       {matrixData.percentCPD.toFixed(1)}%
                     </span>
                   </div>
@@ -251,31 +282,54 @@ export const BlueTestHistory: React.FC<BlueTestHistoryProps> = ({ onSelectAssign
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Matrix View */}
                     <button
                       onClick={() => setSelectedMatrixAssignment(ass)}
-                      className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center gap-1.5"
+                      className="px-2.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center gap-1.5"
                       title="View 49x49 Challenge Matrix"
                     >
                       <Grid className="w-3.5 h-3.5 text-blue-400" />
-                      <span>View Matrix</span>
+                      <span>Matrix</span>
                     </button>
 
-                    {!isCompleted ? (
-                      <button
-                        onClick={() => onSelectAssignment(ass, 'room')}
-                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
-                      >
-                        <Play className="w-3.5 h-3.5" /> Resume
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => onSelectAssignment(ass, 'analysis')}
-                        className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl border border-slate-300 transition-all flex items-center gap-1.5"
-                      >
-                        <BarChart2 className="w-3.5 h-3.5 text-blue-600" /> Analysis
-                      </button>
+                    {/* Resume Buttons */}
+                    {!isCompleted && (
+                      ass.testMode === 'captain' ? (
+                        <button
+                          onClick={() => onSelectAssignment(ass, 'captain_room')}
+                          className="px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+                        >
+                          <Anchor className="w-3.5 h-3.5" /> Resume Captain
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => onSelectAssignment(ass, 'room')}
+                          className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-current" /> Resume Room
+                        </button>
+                      )
                     )}
+
+                    {/* Analysis Options */}
+                    <button
+                      onClick={() => onSelectAssignment(ass, 'analysis')}
+                      className="px-2.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 font-bold text-xs rounded-xl border border-blue-200 transition-all flex items-center gap-1"
+                      title="View Standard %i Analysis"
+                    >
+                      <BarChart2 className="w-3.5 h-3.5 text-blue-600" />
+                      <span>%i Analysis</span>
+                    </button>
+
+                    <button
+                      onClick={() => onSelectAssignment(ass, 'captain_analysis')}
+                      className="px-2.5 py-2 bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold text-xs rounded-xl border border-purple-200 transition-all flex items-center gap-1"
+                      title="View Captain Analysis"
+                    >
+                      <Anchor className="w-3.5 h-3.5 text-purple-600" />
+                      <span>Captain Analysis</span>
+                    </button>
 
                     <button
                       onClick={() => setDeletingAssignment(ass)}

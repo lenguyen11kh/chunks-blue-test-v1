@@ -61,13 +61,13 @@ export function generateBlueTestQuestions(): BlueQuestionDefinition[] {
  */
 export function generateBlueSessionIntros(): BlueSessionIntro[] {
   const sessionConfigs = [
-    { sessionNumber: 1, title: 'Session 1: Marker', narrationText: 'Session 1 – Marker – M.C.T 1.86 seconds (aka CHUNKS CONSTANT)' },
-    { sessionNumber: 2, title: 'Session 2: Chair', narrationText: 'Session 2 – Chair – M.C.T 3.5 seconds' },
-    { sessionNumber: 3, title: 'Session 3: Magnet', narrationText: 'Session 3 – Magnet – M.C.T 6.4 seconds' },
-    { sessionNumber: 4, title: 'Session 4: Cup', narrationText: 'Session 4 – Cup – M.C.T 12 seconds' },
-    { sessionNumber: 5, title: 'Session 5: Photo', narrationText: 'Session 5 – Photo – M.C.T 22.3 seconds' },
-    { sessionNumber: 6, title: 'Session 6: Book', narrationText: 'Session 6 – Book – M.C.T 41.4 seconds' },
-    { sessionNumber: 7, title: 'Session 7: Person', narrationText: 'Session 7 – Person – M.C.T 77 seconds (aka CHUNKS GATE)' },
+    { sessionNumber: 1, title: 'Session 1: Marker', narrationText: 'Session 1 – Marker – T.D.T 1.86 seconds (aka CHUNKS CONSTANT)' },
+    { sessionNumber: 2, title: 'Session 2: Chair', narrationText: 'Session 2 – Chair – T.D.T 3.5 seconds' },
+    { sessionNumber: 3, title: 'Session 3: Magnet', narrationText: 'Session 3 – Magnet – T.D.T 6.4 seconds' },
+    { sessionNumber: 4, title: 'Session 4: Cup', narrationText: 'Session 4 – Cup – T.D.T 12 seconds' },
+    { sessionNumber: 5, title: 'Session 5: Photo', narrationText: 'Session 5 – Photo – T.D.T 22.3 seconds' },
+    { sessionNumber: 6, title: 'Session 6: Book', narrationText: 'Session 6 – Book – T.D.T 41.4 seconds' },
+    { sessionNumber: 7, title: 'Session 7: Person', narrationText: 'Session 7 – Person – T.D.T 77 seconds (aka CHUNKS GATE)' },
   ];
 
   return sessionConfigs.map((cfg) => ({
@@ -85,17 +85,15 @@ export function generateDefaultBluePackage(): BlueTestPackage {
     id: 'blue-pkg-v1',
     name: 'Standard 7-Session Blue Test Package',
     version: '1.0.0',
-    packageIntroText: `CHUNKS Test No. 3
+    packageIntroText: `CHUNKS TEST No.3
 
-Welcome to CHUNKS Test No. 3, also known as the Blue Test or Observation Test. This assessment is developed by CHUNKS based on CHUNKS Theory and will take place in the official Blue Room. The session will be recorded for review and analysis. The test uses Vietnamese and English appropriately to assess real-time visual–audial observation and intuitive Motion–Sound–Emotion response.
+Welcome to CHUNKS Test No. 3, also known as the Blue Test or Observation Test. This assessment is developed by CHUNKS based on CHUNKS Theory and will take place in the official Blue Room. The session will be recorded for review and analysis. A wide range of logical and illogical motions and sounds, including Vietnamese and English expressions, will be used to assess real-time audiovisual observation and intuitive MSE authorship.
 
-This test is designed for a registered native Vietnamese speaker using Vietnamese as L1 and English as L2. It lasts approximately 45 minutes and includes 49 challenges across 7 progressive sessions. Seven tools—a marker, chair, magnet, cup, photo, book, and person—will be introduced one by one to create an evolving CHUNKS scene involving a Captain and a Crew.
+This blue test is suitable for all regardless of your nationality. It lasts approximately 30 minutes and includes 49 challenges with progressively increasing Threshold Delay Time (or TDT), ranging from less than one second to 77 seconds, also known as the CHUNKS Gate. 
 
-The Blue Test is completely memory-free. It does not assess the participant’s ability to memorize earlier actions, sounds, instructions, or idea details. CCI and CVR are not the primary variables because physical intensity and language resistance are not the focus. The central variable is Conscious Time: the length of time for which the participant can remain completely conscious within one uninterrupted flow of observation and response. The longer this conscious flow is maintained, the higher the participant’s Observation level, represented as %i.
+In this test, the test taker assumes the role of Captain, while the Crew mirrors all of the Captain’s Motion–Sound–Emotion (MSE) inputs. Their relative attention–intention levels are recorded in advance as Captain over Crew (CoC). This ratio directly adjusts the Captain’s final intuition score, or %i. If the Captain fails to break the Crew’s mirroring flow within the assigned TDT, the Delay Time for that challenge becomes infinitive. MDT value records the Captain’s fastest successful conscious trick or shortest delay time, while %CPD represents the percentage of challenges in which the Captain successfully breaks the Crew’s flow before reaching TDT.
 
-During every challenge, the Crew must remain calm, observe the Captain’s present Motion–Sound–Emotion input, and respond immediately and intuitively. The Captain must not overspeed, cover the eyes, or block his own ears. The delay between the Captain’s action and the Crew’s response must remain within one second. Illogical MSE responses are allowed because no imposed logic or prepared response should control the conscious flow. However, any missed present-moment input, delayed response, incorrect movement or sound, repeated mistake, or broken rule will activate the ring and interrupt the flow.
-
-Performance will be recorded on the Average Conscious Time (ACT) chart rather than a CPD chart. The official 7-color assessment system is still used: cold-color results increase the Rules Awareness Coefficient, %RAC, represented in this test as %i; hot-color results increase %RFC and indicate breaks in conscious flow. The participant’s ACT and color distribution across all 49 challenges determine the final %i result.`,
+During every challenge, the test taker must remain calm and keep the Crew within sight, observing them without judgment. The Captain must not move too fast or obstruct sight or hearing. If the Captain overspeeds or loses control, that DT immediately becomes iDT and the Crew wins it. The delay between the Captain’s action and the Crew’s response must remain within one second. CiC will immediately stop the challenge either when any delayed response, especially incorrect movement, sound or facial expression from the Crew was found or when DT hits TDT. The official 7-color assessment system will be used to track %x and Delay Time values across 49 challenges.`,
     packageEndText: `This is the end of CHUNKS Test No. 3. After the test, the test taker will receive the result verbally from the CiC. A digital copy of the official result, including the test taker’s ID picture, will be sent directly to the registered email address within 24 hours.
 Thank you for completing the Blue Test with us.`,
     sessionIntros: generateBlueSessionIntros(),

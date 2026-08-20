@@ -1079,9 +1079,24 @@ export const BlueTestRoom: React.FC<BlueTestRoomProps> = ({
                 {/* Question Banner */}
                 <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
                   <div className="min-w-0">
-                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-blue-400 block truncate">
-                      Session {currentSessionNumber} — Question {currentQuestion.questionInSession}
-                    </span>
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-blue-400 block truncate">
+                        Session {currentSessionNumber} — Question {currentQuestion.questionInSession}
+                      </span>
+                      <button
+                        onClick={() => {
+                          if (questionState === 'running') return;
+                          playChallengeCue(currentGlobalOrder, currentQuestion.questionInSession);
+                        }}
+                        disabled={questionState === 'running'}
+                        className="px-2 py-0.5 text-[10px] sm:text-xs font-bold bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/50 rounded-lg flex items-center gap-1 transition-colors disabled:opacity-50"
+                        title={`Replay audio cue for Question ${currentGlobalOrder}`}
+                        aria-label={`Replay audio cue for Question ${currentGlobalOrder}`}
+                      >
+                        <Volume2 className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Cue #{currentQuestion.questionInSession}</span>
+                      </button>
+                    </div>
                     <h2 className="text-base sm:text-2xl font-black text-white mt-0.5 truncate">
                       {currentQuestion.promptText}
                     </h2>

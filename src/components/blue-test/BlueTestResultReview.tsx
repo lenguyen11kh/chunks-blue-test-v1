@@ -26,6 +26,7 @@ interface BlueTestResultReviewProps {
   isErrorState?: boolean;
   onRetrySave?: () => void;
   onUpdateAttempt?: (updated: BlueQuestionAttempt) => void;
+  isCaptainMode?: boolean;
 }
 
 export const BlueTestResultReview: React.FC<BlueTestResultReviewProps> = ({
@@ -38,6 +39,7 @@ export const BlueTestResultReview: React.FC<BlueTestResultReviewProps> = ({
   isErrorState = false,
   onRetrySave,
   onUpdateAttempt,
+  isCaptainMode = false,
 }) => {
   const primaryButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -157,11 +159,13 @@ export const BlueTestResultReview: React.FC<BlueTestResultReviewProps> = ({
   const isLastQuestion = attempt.globalQuestionOrder === totalQuestions;
   const isSessionEnd = attempt.questionInSession === 7;
 
-  let primaryActionText = 'XÁC NHẬN & CHUYỂN CÂU TIẾP THEO';
+  let primaryActionText = isCaptainMode ? 'CONFIRM & NEXT QUESTION' : 'XÁC NHẬN & CHUYỂN CÂU TIẾP THEO';
   if (isLastQuestion) {
-    primaryActionText = 'TỔNG KẾT BÀI TEST';
+    primaryActionText = isCaptainMode ? 'COMPLETE TEST SUMMARY' : 'TỔNG KẾT BÀI TEST';
   } else if (isSessionEnd) {
-    primaryActionText = `TIẾP TỤC SESSION ${attempt.sessionNumber + 1} INTRO`;
+    primaryActionText = isCaptainMode
+      ? `CONTINUE TO SESSION ${attempt.sessionNumber + 1} INTRO`
+      : `TIẾP TỤC SESSION ${attempt.sessionNumber + 1} INTRO`;
   }
 
   return (
@@ -173,7 +177,7 @@ export const BlueTestResultReview: React.FC<BlueTestResultReviewProps> = ({
             Session {attempt.sessionNumber}
           </span>
           <span className="font-extrabold text-sm text-slate-200">
-            Câu Q{attempt.globalQuestionOrder} <span className="text-slate-500 font-normal">/ {totalQuestions}</span>
+            {isCaptainMode ? 'Question Q' : 'Câu Q'}{attempt.globalQuestionOrder} <span className="text-slate-500 font-normal">/ {totalQuestions}</span>
           </span>
         </div>
 
@@ -189,14 +193,14 @@ export const BlueTestResultReview: React.FC<BlueTestResultReviewProps> = ({
           <div className="p-3 bg-rose-950/80 border border-rose-500/50 rounded-xl flex items-center justify-between text-xs text-rose-200">
             <div className="flex items-center gap-2 font-semibold">
               <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-              <span>Chưa lưu được kết quả. Vui lòng thử lại.</span>
+              <span>{isCaptainMode ? 'Unable to save result. Please try again.' : 'Chưa lưu được kết quả. Vui lòng thử lại.'}</span>
             </div>
             {onRetrySave && (
               <button
                 onClick={onRetrySave}
                 className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg transition-all text-xs shrink-0 cursor-pointer"
               >
-                Thử lại
+                {isCaptainMode ? 'Retry' : 'Thử lại'}
               </button>
             )}
           </div>
@@ -223,92 +227,96 @@ export const BlueTestResultReview: React.FC<BlueTestResultReviewProps> = ({
                 <span className="text-xs font-mono font-normal opacity-80">({effectivePercentVal}%)</span>
               </div>
               <p className="text-xs text-slate-300">
-                {displayEffectiveElapsed}s / {displayMax}s ({totalC} động tác)
+                {displayEffectiveElapsed}s / {displayMax}s {isCaptainMode ? '(DT / TDT)' : `(${totalC} động tác)`}
               </p>
             </div>
           </div>
 
-          <div className="text-right text-[11px] font-mono text-slate-400">
-            <span>Dự đoán: {predictedIndex > totalC ? 'Tất cả ĐẠT' : `Lỗi C${predictedIndex}`}</span>
-          </div>
+          {!isCaptainMode && (
+            <div className="text-right text-[11px] font-mono text-slate-400">
+              <span>Dự đoán: {predictedIndex > totalC ? 'Tất cả ĐẠT' : `Lỗi C${predictedIndex}`}</span>
+            </div>
+          )}
         </div>
 
-        {/* Minimal Challenge Selection Box */}
-        <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-3.5 space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
-            <span className="font-bold text-slate-200 flex items-center gap-1.5">
-              <Target className="w-4 h-4 text-amber-400" />
-              <span>Xác nhận động tác dừng ({totalC} C_m):</span>
-            </span>
+        {/* Minimal Challenge Selection Box - HIDE IN CAPTAIN MODE */}
+        {!isCaptainMode && (
+          <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-3.5 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
+              <span className="font-bold text-slate-200 flex items-center gap-1.5">
+                <Target className="w-4 h-4 text-amber-400" />
+                <span>Xác nhận động tác dừng ({totalC} C_m):</span>
+              </span>
 
-            <span className="text-[11px] font-mono text-amber-300/90">
-              ~{timePerChallenge}s / động tác
-            </span>
-          </div>
+              <span className="text-[11px] font-mono text-amber-300/90">
+                ~{timePerChallenge}s / động tác
+              </span>
+            </div>
 
-          {/* Quick Option Row: All Passed vs Failed at C_m */}
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => applyNewStoppedIndex(totalC + 1)}
-              className={`py-2 px-3 rounded-xl border font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                isAllPassed
-                  ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 ring-1 ring-emerald-500/50'
-                  : 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-slate-400'
-              }`}
-            >
-              <span>🟩 Tất cả C1..C{totalC} ĐẠT</span>
-            </button>
+            {/* Quick Option Row: All Passed vs Failed at C_m */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => applyNewStoppedIndex(totalC + 1)}
+                className={`py-2 px-3 rounded-xl border font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  isAllPassed
+                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 ring-1 ring-emerald-500/50'
+                    : 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-slate-400'
+                }`}
+              >
+                <span>🟩 Tất cả C1..C{totalC} ĐẠT</span>
+              </button>
 
-            <div
-              className={`py-2 px-3 rounded-xl border font-bold text-center flex items-center justify-center gap-1.5 ${
-                !isAllPassed
-                  ? 'bg-rose-500/20 border-rose-500 text-rose-300 ring-1 ring-rose-500/50'
-                  : 'bg-slate-800/80 border-slate-700 text-slate-500'
-              }`}
-            >
-              <span>{isAllPassed ? '🟥 Dừng ở C_m' : `🟥 Dừng ở C${stoppedIndex}`}</span>
+              <div
+                className={`py-2 px-3 rounded-xl border font-bold text-center flex items-center justify-center gap-1.5 ${
+                  !isAllPassed
+                    ? 'bg-rose-500/20 border-rose-500 text-rose-300 ring-1 ring-rose-500/50'
+                    : 'bg-slate-800/80 border-slate-700 text-slate-500'
+                }`}
+              >
+                <span>{isAllPassed ? '🟥 Dừng ở C_m' : `🟥 Dừng ở C${stoppedIndex}`}</span>
+              </div>
+            </div>
+
+            {/* Compact Pill List C1..Ck */}
+            <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1 bg-slate-900/80 rounded-xl border border-slate-800">
+              {Array.from({ length: totalC }, (_, i) => i + 1).map((cIndex) => {
+                const isFailedAtThis = stoppedIndex === cIndex;
+                const isPassedBefore = stoppedIndex > cIndex;
+
+                let btnClass = 'bg-slate-800/80 text-slate-400 border-slate-700 hover:bg-slate-700';
+                if (isFailedAtThis) {
+                  btnClass = 'bg-rose-600 text-white border-rose-400 font-black scale-105 shadow-md ring-2 ring-rose-400';
+                } else if (isPassedBefore) {
+                  btnClass = 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60 font-semibold';
+                }
+
+                return (
+                  <button
+                    key={cIndex}
+                    type="button"
+                    onClick={() => applyNewStoppedIndex(cIndex)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all border cursor-pointer ${btnClass}`}
+                    title={isFailedAtThis ? `C${cIndex} bị lỗi` : `Đánh dấu lỗi tại C${cIndex}`}
+                  >
+                    {isFailedAtThis ? `❌ C${cIndex}` : isPassedBefore ? `✓ C${cIndex}` : `C${cIndex}`}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Status Text */}
+            <div className="text-[11px] font-mono text-slate-400 text-center">
+              {isAllPassed ? (
+                <span className="text-emerald-400 font-bold">✓ Đạt 100% tất cả {totalC} động tác</span>
+              ) : (
+                <span className="text-amber-300">
+                  Đạt <strong className="text-emerald-400">{stoppedIndex - 1}/{totalC}</strong> động tác • Lỗi ở <strong className="text-rose-400">C{stoppedIndex}</strong>
+                </span>
+              )}
             </div>
           </div>
-
-          {/* Compact Pill List C1..Ck */}
-          <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1 bg-slate-900/80 rounded-xl border border-slate-800">
-            {Array.from({ length: totalC }, (_, i) => i + 1).map((cIndex) => {
-              const isFailedAtThis = stoppedIndex === cIndex;
-              const isPassedBefore = stoppedIndex > cIndex;
-
-              let btnClass = 'bg-slate-800/80 text-slate-400 border-slate-700 hover:bg-slate-700';
-              if (isFailedAtThis) {
-                btnClass = 'bg-rose-600 text-white border-rose-400 font-black scale-105 shadow-md ring-2 ring-rose-400';
-              } else if (isPassedBefore) {
-                btnClass = 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60 font-semibold';
-              }
-
-              return (
-                <button
-                  key={cIndex}
-                  type="button"
-                  onClick={() => applyNewStoppedIndex(cIndex)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all border cursor-pointer ${btnClass}`}
-                  title={isFailedAtThis ? `C${cIndex} bị lỗi` : `Đánh dấu lỗi tại C${cIndex}`}
-                >
-                  {isFailedAtThis ? `❌ C${cIndex}` : isPassedBefore ? `✓ C${cIndex}` : `C${cIndex}`}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Status Text */}
-          <div className="text-[11px] font-mono text-slate-400 text-center">
-            {isAllPassed ? (
-              <span className="text-emerald-400 font-bold">✓ Đạt 100% tất cả {totalC} động tác</span>
-            ) : (
-              <span className="text-amber-300">
-                Đạt <strong className="text-emerald-400">{stoppedIndex - 1}/{totalC}</strong> động tác • Lỗi ở <strong className="text-rose-400">C{stoppedIndex}</strong>
-              </span>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* Primary Action Safeguard Button */}
         <button
@@ -328,7 +336,11 @@ export const BlueTestResultReview: React.FC<BlueTestResultReviewProps> = ({
           {isLocked ? (
             <>
               <Clock className="w-4 h-4 text-amber-400 animate-spin" />
-              <span>🔒 ĐANG KHÓA ({(lockCountdownMs / 1000).toFixed(1)}s) - CHỜ XÁC NHẬN</span>
+              <span>
+                {isCaptainMode
+                  ? `🔒 LOCKED (${(lockCountdownMs / 1000).toFixed(1)}s) - PLEASE CONFIRM`
+                  : `🔒 ĐANG KHÓA (${(lockCountdownMs / 1000).toFixed(1)}s) - CHỜ XÁC NHẬN`}
+              </span>
             </>
           ) : (
             <>
@@ -350,7 +362,7 @@ export const BlueTestResultReview: React.FC<BlueTestResultReviewProps> = ({
               onClick={onTryAgain}
               className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30 transition-all flex items-center gap-1 cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5" /> Làm lại
+              <RotateCcw className="w-3.5 h-3.5" /> {isCaptainMode ? 'Try Again' : 'Làm lại'}
             </button>
           )}
 
@@ -358,7 +370,7 @@ export const BlueTestResultReview: React.FC<BlueTestResultReviewProps> = ({
             onClick={onOpenCorrection}
             className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold border border-slate-700 transition-all flex items-center gap-1 cursor-pointer"
           >
-            <Edit3 className="w-3.5 h-3.5" /> Sửa kết quả
+            <Edit3 className="w-3.5 h-3.5" /> {isCaptainMode ? 'Edit Result' : 'Sửa kết quả'}
           </button>
         </div>
 
@@ -368,7 +380,7 @@ export const BlueTestResultReview: React.FC<BlueTestResultReviewProps> = ({
             className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold border border-slate-700 transition-all flex items-center gap-1 cursor-pointer"
             title="Replay End Bell"
           >
-            <Volume2 className="w-3.5 h-3.5" /> Chuông
+            <Volume2 className="w-3.5 h-3.5" /> {isCaptainMode ? 'Bell' : 'Chuông'}
           </button>
         )}
       </div>

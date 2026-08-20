@@ -209,7 +209,8 @@ export function playWebSpeech(
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = currentPlaybackRate;
-    utterance.lang = 'vi-VN';
+    const isVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(text);
+    utterance.lang = isVietnamese ? 'vi-VN' : 'en-US';
 
     const context: ActiveNarrationContext = {
       text,
@@ -307,17 +308,8 @@ export function playNarrationAssetOrSpeech(
     const handleFailure = (reason: string) => {
       if (hasFailed) return;
       hasFailed = true;
-      console.warn(`Gemini audio asset playback failed (${reason}) for: "${text}". Strictly skipping machine voice fallback.`);
-      notifyStatus({
-        isPlaying: false,
-        isPaused: false,
-        hasError: true,
-        errorMessage: `Audio asset playback failed (${reason})`,
-        source: 'gemini_asset',
-        title: title || 'Test Narration',
-        text,
-      });
-      if (onEnded) onEnded();
+      console.info(`Audio asset playback unavailable (${reason}) for: "${text}". Falling back to Web Speech API.`);
+      playWebSpeech(text, onStatusChange, onEnded, title);
     };
 
     try {
@@ -369,7 +361,7 @@ export function playNarrationAssetOrSpeech(
       };
 
       audio.play().catch((playErr) => {
-        handleFailure('Autoplay prevented or load error: ' + playErr);
+        handleFailure('Autoplay prevented or load error');
       });
 
       return () => {
@@ -383,19 +375,8 @@ export function playNarrationAssetOrSpeech(
     }
   }
 
-  // Strictly no robotic machine voice fallback in Audio Studio mode
-  console.warn(`No active Audio Studio asset available for key "${targetKey || title}". Machine voice disabled.`);
-  notifyStatus({
-    isPlaying: false,
-    isPaused: false,
-    hasError: true,
-    errorMessage: `No Audio Studio asset available for ${targetKey || title}`,
-    source: 'gemini_asset',
-    title: title || 'Test Narration',
-    text,
-  });
-  if (onEnded) onEnded();
-  return () => {};
+  // Fall back to Web Speech API if no asset available
+  return playWebSpeech(text, onStatusChange, onEnded, title);
 }
 
 /**

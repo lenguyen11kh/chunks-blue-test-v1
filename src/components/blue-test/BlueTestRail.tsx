@@ -140,6 +140,9 @@ export const BlueTestRail: React.FC<BlueTestRailProps> = ({
     return () => unsubscribe();
   }, []);
 
+  // Toggle editor visibility map for session intros
+  const [showEditorMap, setShowEditorMap] = useState<Record<number, boolean>>({});
+
   // Editable session intro texts (1..7) synchronized with active AudioStorageAdapter versions
   const [sessionIntroTexts, setSessionIntroTexts] = useState<Record<number, string>>(() => {
     const initial: Record<number, string> = {};
@@ -519,16 +522,46 @@ export const BlueTestRail: React.FC<BlueTestRailProps> = ({
                     </div>
 
                     <div className="space-y-1">
-                      <textarea
-                        rows={2}
-                        value={sessionIntroTexts[sessionNum] || ''}
-                        onChange={(e) => {
-                          const newText = e.target.value;
-                          setSessionIntroTexts((prev) => ({ ...prev, [sessionNum]: newText }));
-                        }}
-                        placeholder={`Paste or edit Session ${sessionNum} intro text...`}
-                        className="w-full text-[11px] bg-slate-950/90 border border-slate-800 focus:border-blue-500 rounded-lg p-2 text-slate-200 placeholder-slate-600 focus:outline-hidden transition-colors resize-y font-sans leading-snug"
-                      />
+                      {showEditorMap[sessionNum] ? (
+                        <div className="space-y-1.5 pt-1">
+                          <textarea
+                            rows={2}
+                            value={sessionIntroTexts[sessionNum] || ''}
+                            onChange={(e) => {
+                              const newText = e.target.value;
+                              setSessionIntroTexts((prev) => ({ ...prev, [sessionNum]: newText }));
+                            }}
+                            placeholder={`Paste or edit Session ${sessionNum} intro text...`}
+                            className="w-full text-[11px] bg-slate-950/90 border border-blue-500/80 focus:border-blue-400 rounded-lg p-2 text-slate-100 placeholder-slate-600 focus:outline-none transition-colors resize-y font-sans leading-snug shadow-inner"
+                          />
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowEditorMap((prev) => ({ ...prev, [sessionNum]: false }));
+                              }}
+                              className="text-[10px] text-blue-300 hover:text-white font-bold px-2 py-0.5 rounded bg-blue-900/60 border border-blue-700/50 transition-colors"
+                            >
+                              Close Editor
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowEditorMap((prev) => ({ ...prev, [sessionNum]: true }));
+                          }}
+                          className="px-2.5 py-1.5 bg-slate-950/70 border border-slate-800/80 hover:border-slate-700 rounded-lg text-[10px] text-slate-300 italic cursor-pointer transition-all flex items-center justify-between group shadow-xs mt-1"
+                          title="Click to view or edit session intro script"
+                        >
+                          <span className="line-clamp-1 opacity-90 pr-2">
+                            "{sessionIntroTexts[sessionNum] || `Session ${sessionNum} Intro Script`}"
+                          </span>
+                          <Edit3 className="w-3 h-3 text-slate-500 group-hover:text-blue-400 shrink-0 transition-colors" />
+                        </div>
+                      )}
                     </div>
                   </div>
 

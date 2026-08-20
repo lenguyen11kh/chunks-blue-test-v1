@@ -9,6 +9,7 @@ interface BlueTestFaceIndicatorProps {
   maxTimeDisplay?: string;
   isStopped?: boolean;
   reducedMotion?: boolean;
+  isReversedScale?: boolean;
 }
 
 export const BlueTestFaceIndicator: React.FC<BlueTestFaceIndicatorProps> = ({
@@ -17,10 +18,16 @@ export const BlueTestFaceIndicator: React.FC<BlueTestFaceIndicatorProps> = ({
   maxTimeDisplay = 'Max',
   isStopped = false,
   reducedMotion = false,
+  isReversedScale = false,
 }) => {
   const colorDef = getSevenColorDefinition(activeColor);
   const clampedRatio = Math.max(0, Math.min(1, completionRatio));
   const percentStr = `${Math.round(clampedRatio * 100)}%`;
+
+  const reversedColorsOrdered: SevenColor[] = ['purple', 'indigo', 'blue', 'green', 'yellow', 'orange', 'red'];
+  const colorsToRender = isReversedScale
+    ? reversedColorsOrdered.map((c) => getSevenColorDefinition(c))
+    : SEVEN_COLORS_ORDERED;
 
   // Determine face icon & label based on 7 colors
   const getFaceInfo = (color: SevenColor) => {
@@ -87,15 +94,15 @@ export const BlueTestFaceIndicator: React.FC<BlueTestFaceIndicatorProps> = ({
     >
       {/* Header labels */}
       <div className="flex items-center justify-between text-xs font-semibold text-slate-400 px-1">
-        <span>0s (Start)</span>
-        <span>{maxTimeDisplay}</span>
+        <span>0s ({isReversedScale ? 'Purple' : 'Red'})</span>
+        <span>{maxTimeDisplay} ({isReversedScale ? 'Red' : 'Purple'})</span>
       </div>
 
       {/* 7-Segment Color Progress Bar Container with Traveling Face Indicator */}
       <div className="relative pt-7 pb-2 min-h-[72px]">
         {/* The 7-segment colored background bar */}
         <div className="relative h-9 sm:h-10 w-full bg-slate-950 rounded-xl sm:rounded-2xl p-1 border border-slate-800 flex gap-0.5 sm:gap-1 overflow-hidden shadow-inner">
-          {SEVEN_COLORS_ORDERED.map((def) => {
+          {colorsToRender.map((def) => {
             const isCurrentActive = activeColor === def.color;
             return (
               <div

@@ -1,5 +1,5 @@
 
-import { BlueAudioVersion, NarrationLocationKey } from '../types/blue-test';
+import { BlueAudioVersion, NarrationLocationKey, AudioStorageVerificationReport } from '../types/blue-test';
 import { CHALLENGE_NARRATION_SCRIPTS } from './challenge-scripts';
 
 // In-memory cache to guarantee synchronous availability
@@ -29,52 +29,58 @@ export const DEFAULT_NARRATION_SCRIPTS: Record<NarrationLocationKey, { label: st
   pkg_intro: {
     label: 'Package Intro (Start-red-test)',
     description: 'CHUNKS Test No. 3 Official Blue Room Intro',
-    defaultScript: `Welcome to CHUNKS Test No. 3. This test contains 49 questions across 7 exponential sessions. 
-Each session will test your ability to respond correctly within the maximum conscious time limit.
-Please prepare your focus. The test will begin shortly.`,
-    spokenScript: `Welcome to CHUNKS Test No. 3. This test contains 49 questions across 7 exponential sessions. Each session will test your ability to respond correctly within the maximum conscious time limit. Please prepare your focus. The test will begin shortly.`,
+    defaultScript: `CHUNKS TEST No.3
+
+Welcome to CHUNKS Test No. 3, also known as the Blue Test or Observation Test. This assessment is developed by CHUNKS based on CHUNKS Theory and will take place in the official Blue Room. The session will be recorded for review and analysis. A wide range of logical and illogical motions and sounds, including Vietnamese and English expressions, will be used to assess real-time audiovisual observation and intuitive MSE authorship.
+
+This blue test is suitable for all regardless of your nationality. It lasts approximately 30 minutes and includes 49 challenges with progressively increasing Threshold Delay Time (or TDT), ranging from less than one second to 77 seconds, also known as the CHUNKS Gate. 
+
+In this test, the test taker assumes the role of Captain, while the Crew mirrors all of the Captain’s Motion–Sound–Emotion (MSE) inputs. Their relative attention–intention levels are recorded in advance as Captain over Crew (CoC). This ratio directly adjusts the Captain’s final intuition score, or %i. If the Captain fails to break the Crew’s mirroring flow within the assigned TDT, the Delay Time for that challenge becomes infinitive. MDT value records the Captain’s fastest successful conscious trick or shortest delay time, while %CPD represents the percentage of challenges in which the Captain successfully breaks the Crew’s flow before reaching TDT.
+
+During every challenge, the test taker must remain calm and keep the Crew within sight, observing them without judgment. The Captain must not move too fast or obstruct sight or hearing. If the Captain overspeeds or loses control, that DT immediately becomes iDT and the Crew wins it. The delay between the Captain’s action and the Crew’s response must remain within one second. CiC will immediately stop the challenge either when any delayed response, especially incorrect movement, sound or facial expression from the Crew was found or when DT hits TDT. The official 7-color assessment system will be used to track %x and Delay Time values across 49 challenges.`,
+    spokenScript: `Welcome to CHUNKS Test No. 3, also known as the Blue Test or Observation Test. This assessment is developed by CHUNKS based on CHUNKS Theory and will take place in the official Blue Room. The session will be recorded for review and analysis. A wide range of logical and illogical motions and sounds, including Vietnamese and English expressions, will be used to assess real-time audiovisual observation and intuitive MSE authorship. This blue test is suitable for all regardless of your nationality. It lasts approximately 30 minutes and includes 49 challenges with progressively increasing Threshold Delay Time (or TDT), ranging from less than one second to 77 seconds, also known as the CHUNKS Gate. In this test, the test taker assumes the role of Captain, while the Crew mirrors all of the Captain's Motion-Sound-Emotion inputs. Their relative attention-intention levels are recorded in advance as Captain over Crew. This ratio directly adjusts the Captain's final intuition score, or %i. If the Captain fails to break the Crew's mirroring flow within the assigned TDT, the Delay Time for that challenge becomes infinitive. MDT value records the Captain's fastest successful conscious trick or shortest delay time, while %CPD represents the percentage of challenges in which the Captain successfully breaks the Crew's flow before reaching TDT. During every challenge, the test taker must remain calm and keep the Crew within sight, observing them without judgment. The Captain must not move too fast or obstruct sight or hearing. If the Captain overspeeds or loses control, that DT immediately becomes iDT and the Crew wins it. The delay between the Captain's action and the Crew's response must remain within one second. CiC will immediately stop the challenge either when any delayed response, especially incorrect movement, sound or facial expression from the Crew was found or when DT hits TDT. The official 7-color assessment system will be used to track %x and Delay Time values across 49 challenges.`,
   },
   session_1_intro: {
     label: 'Session 1 Intro',
     description: 'Intro-session-1: Marker',
-    defaultScript: 'Session 1 – Marker – M.C.T 1.86 seconds (aka CHUNKS CONSTANT)',
-    spokenScript: 'Session 1 – Marker – M.C.T 1.86 seconds (aka CHUNKS CONSTANT)',
+    defaultScript: 'Session 1 – Marker – T.D.T 1.86 seconds (aka CHUNKS CONSTANT)',
+    spokenScript: 'Session 1 – Marker – T.D.T 1.86 seconds (aka CHUNKS CONSTANT)',
   },
   session_2_intro: {
     label: 'Session 2 Intro',
     description: 'Intro-session-2: Chair',
-    defaultScript: 'Session 2 – Chair – M.C.T 3.5 seconds',
-    spokenScript: 'Session 2 – Chair – M.C.T 3.5 seconds',
+    defaultScript: 'Session 2 – Chair – T.D.T 3.5 seconds',
+    spokenScript: 'Session 2 – Chair – T.D.T 3.5 seconds',
   },
   session_3_intro: {
     label: 'Session 3 Intro',
     description: 'Intro-session-3: Magnet',
-    defaultScript: 'Session 3 – Magnet – M.C.T 6.4 seconds',
-    spokenScript: 'Session 3 – Magnet – M.C.T 6.4 seconds',
+    defaultScript: 'Session 3 – Magnet – T.D.T 6.4 seconds',
+    spokenScript: 'Session 3 – Magnet – T.D.T 6.4 seconds',
   },
   session_4_intro: {
     label: 'Session 4 Intro',
     description: 'Intro-session-4: Cup',
-    defaultScript: 'Session 4 – Cup – M.C.T 12 seconds',
-    spokenScript: 'Session 4 – Cup – M.C.T 12 seconds',
+    defaultScript: 'Session 4 – Cup – T.D.T 12 seconds',
+    spokenScript: 'Session 4 – Cup – T.D.T 12 seconds',
   },
   session_5_intro: {
     label: 'Session 5 Intro',
     description: 'Intro-session-5: Photo',
-    defaultScript: 'Session 5 – Photo – M.C.T 22.3 seconds',
-    spokenScript: 'Session 5 – Photo – M.C.T 22.3 seconds',
+    defaultScript: 'Session 5 – Photo – T.D.T 22.3 seconds',
+    spokenScript: 'Session 5 – Photo – T.D.T 22.3 seconds',
   },
   session_6_intro: {
     label: 'Session 6 Intro',
     description: 'Intro-session-6: Book',
-    defaultScript: 'Session 6 – Book – M.C.T 41.4 seconds',
-    spokenScript: 'Session 6 – Book – M.C.T 41.4 seconds',
+    defaultScript: 'Session 6 – Book – T.D.T 41.4 seconds',
+    spokenScript: 'Session 6 – Book – T.D.T 41.4 seconds',
   },
   session_7_intro: {
     label: 'Session 7 Intro',
     description: 'Intro-session-7: Person',
-    defaultScript: 'Session 7 – Person – M.C.T 77 seconds (aka CHUNKS GATE)',
-    spokenScript: 'Session 7 – Person – M.C.T 77 seconds (aka CHUNKS GATE)',
+    defaultScript: 'Session 7 – Person – T.D.T 77 seconds (aka CHUNKS GATE)',
+    spokenScript: 'Session 7 – Person – T.D.T 77 seconds (aka CHUNKS GATE)',
   },
   pkg_end: {
     label: 'Package End Narration (End-red-test)',
@@ -298,5 +304,53 @@ export class AudioStorageAdapter {
     }).catch(console.warn);
 
     this.notifySubscribers();
+  }
+
+  static async clearAllVersions(): Promise<void> {
+    inMemoryVersionsCache = [];
+    const keys = Object.keys(DEFAULT_NARRATION_SCRIPTS) as NarrationLocationKey[];
+    const result: Record<NarrationLocationKey, string | null> = {} as any;
+    keys.forEach((k) => (result[k] = null));
+    inMemoryActiveMappingsCache = result;
+
+    try {
+      await fetch('/api/audio-versions/clear-all', { method: 'POST' });
+      await this.initFromServer();
+    } catch (e) {
+      console.warn('Failed to clear all audio versions on server:', e);
+    }
+
+    this.notifySubscribers();
+  }
+
+  static async syncStorageAudio(): Promise<{ syncedCount: number; message: string }> {
+    try {
+      const res = await fetch('/api/audio-storage/sync-bucket', { method: 'POST' });
+      const data = await res.json();
+      await this.initFromServer();
+      this.notifySubscribers();
+      return {
+        syncedCount: data.syncedCount || 0,
+        message: data.message || 'Synced storage audio successfully!',
+      };
+    } catch (e: any) {
+      console.warn('Failed to sync storage audio:', e);
+      throw new Error(e?.message || 'Failed to sync cloud storage audio.');
+    }
+  }
+
+  static async verifyStorageMetadata(): Promise<AudioStorageVerificationReport> {
+    try {
+      const res = await fetch('/api/audio-storage/verify', { method: 'POST' });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `HTTP error ${res.status}`);
+      }
+      const data: AudioStorageVerificationReport = await res.json();
+      return data;
+    } catch (e: any) {
+      console.warn('Failed to verify storage metadata:', e);
+      throw new Error(e?.message || 'Failed to verify audio storage metadata against bucket.');
+    }
   }
 }

@@ -25,15 +25,6 @@ let isFirestoreAccessible = true;
 
 function initFirebaseAdmin() {
   try {
-    const existingApps = getApps();
-    if (existingApps.length > 0) {
-      firestoreDb = getFirestore();
-      storageBucket = getStorage().bucket();
-      isFirebaseConnected = true;
-      console.log('[Firebase Admin] Connected using existing app instance.');
-      return;
-    }
-
     let configJson: any = null;
     const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
     if (fs.existsSync(configPath)) {
@@ -44,8 +35,23 @@ function initFirebaseAdmin() {
       }
     }
 
+    const rawBucketName =
+      process.env.GCP_STORAGE_BUCKET ||
+      process.env.FIREBASE_STORAGE_BUCKET ||
+      configJson?.storageBucket ||
+      'gen-lang-client-0589169162.firebasestorage.app';
+    const cleanBucketName = rawBucketName.replace(/^gs:\/\//, '').replace(/\/$/, '');
+
+    const existingApps = getApps();
+    if (existingApps.length > 0) {
+      firestoreDb = getFirestore();
+      storageBucket = getStorage().bucket(cleanBucketName);
+      isFirebaseConnected = true;
+      console.log(`[Firebase Admin] Connected using existing app instance with bucket: ${cleanBucketName}`);
+      return;
+    }
+
     const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
-    const bucketName = process.env.GCP_STORAGE_BUCKET || process.env.FIREBASE_STORAGE_BUCKET || configJson?.storageBucket;
     const projectId = configJson?.projectId;
     const databaseId = configJson?.firestoreDatabaseId;
 
@@ -62,12 +68,12 @@ function initFirebaseAdmin() {
         const adminApp = initializeApp({
           credential: cert(serviceAccount),
           projectId: projectId || serviceAccount.project_id,
-          storageBucket: bucketName || `${serviceAccount.project_id}.appspot.com`,
+          storageBucket: cleanBucketName,
         });
         firestoreDb = databaseId ? getFirestore(adminApp, databaseId) : getFirestore(adminApp);
-        storageBucket = getStorage(adminApp).bucket(bucketName);
+        storageBucket = getStorage(adminApp).bucket(cleanBucketName);
         isFirebaseConnected = true;
-        console.log('[Firebase Admin] Successfully initialized with Service Account credentials.');
+        console.log(`[Firebase Admin] Successfully initialized with Service Account credentials for bucket: ${cleanBucketName}`);
         return;
       }
     }
@@ -76,13 +82,13 @@ function initFirebaseAdmin() {
     try {
       const adminApp = initializeApp({
         credential: applicationDefault(),
-        projectId: projectId,
-        storageBucket: bucketName,
+        projectId: projectId || 'gen-lang-client-0589169162',
+        storageBucket: cleanBucketName,
       });
       firestoreDb = databaseId ? getFirestore(adminApp, databaseId) : getFirestore(adminApp);
-      storageBucket = bucketName ? getStorage(adminApp).bucket(bucketName) : getStorage(adminApp).bucket();
+      storageBucket = getStorage(adminApp).bucket(cleanBucketName);
       isFirebaseConnected = true;
-      console.log('[Firebase Admin] Successfully initialized with Application Default Credentials.');
+      console.log(`[Firebase Admin] Successfully initialized with Application Default Credentials for bucket: ${cleanBucketName}`);
     } catch (adcErr) {
       console.log('[Firebase Admin] Cloud credentials not present. Running with local filesystem & memory storage fallback.');
     }
@@ -94,17 +100,41 @@ function initFirebaseAdmin() {
 initFirebaseAdmin();
 
 
-// Cloud Storage upload helper
-let isStorageAccessible = true;
+let isStorageUploadDisabled = false;
 
+// Cloud Storage upload helper
 async function uploadAudioToCloudStorage(
   fileName: string,
   buffer: Buffer,
   contentType: string = 'audio/wav'
 ): Promise<string | null> {
-  if (!storageBucket || !isStorageAccessible) return null;
+  if (isStorageUploadDisabled) return null;
+  let targetBucket = storageBucket;
+
+  if (!targetBucket) {
+    try {
+      const rawBucketName =
+        process.env.GCP_STORAGE_BUCKET ||
+        process.env.FIREBASE_STORAGE_BUCKET ||
+        'gen-lang-client-0589169162.firebasestorage.app';
+      const cleanBucketName = rawBucketName.replace(/^gs:\/\//, '').replace(/\/$/, '');
+      targetBucket = getStorage().bucket(cleanBucketName);
+    } catch (e) {
+      console.warn('[Cloud Storage] Failed to initialize storage bucket instance:', e);
+      return null;
+    }
+  }
+
+  if (!targetBucket) {
+    console.log('[Cloud Storage] No Storage bucket available for upload.');
+    return null;
+  }
+
   try {
-    const file = storageBucket.file(`audio-storage/${fileName}`);
+    const filePath = `audio-storage/${fileName}`;
+    const file = targetBucket.file(filePath);
+
+    // Save audio buffer to the storage bucket
     try {
       await file.save(buffer, {
         metadata: {
@@ -112,22 +142,60 @@ async function uploadAudioToCloudStorage(
           cacheControl: 'public, max-age=31536000',
         },
         public: true,
+        resumable: false,
       });
-    } catch (publicErr) {
-      // Fallback: Try saving without explicit public ACL (e.g. uniform bucket-level access enabled)
+    } catch (publicErr: any) {
+      const pubMsg = publicErr?.message || String(publicErr);
+      if (
+        pubMsg.includes('storage.objects.create') ||
+        pubMsg.includes('PERMISSION_DENIED') ||
+        pubMsg.includes('403') ||
+        pubMsg.includes('denied') ||
+        pubMsg.includes('AccessDenied')
+      ) {
+        throw publicErr;
+      }
+      // Fallback: Save without explicit public ACL option (e.g. Uniform Bucket-Level Access enabled)
       await file.save(buffer, {
         metadata: {
           contentType,
           cacheControl: 'public, max-age=31536000',
         },
+        resumable: false,
       });
     }
-    const publicUrl = `https://storage.googleapis.com/${storageBucket.name}/audio-storage/${fileName}`;
-    console.log(`[Cloud Storage] Successfully uploaded audio to ${publicUrl}`);
-    return publicUrl;
+
+    // Try making file publicly readable if supported by bucket permissions
+    try {
+      await file.makePublic();
+    } catch (aclErr) {
+      // Uniform Bucket-Level Access enabled on GCP/Firebase bucket, ACL makePublic is safely skipped
+    }
+
+    const bucketNameStr = targetBucket.name || 'gen-lang-client-0589169162.firebasestorage.app';
+    const firebaseMediaUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketNameStr}/o/${encodeURIComponent(filePath)}?alt=media`;
+
+    console.log(`[Cloud Storage] Successfully uploaded ${fileName} (${buffer.length} bytes) to gs://${bucketNameStr}/${filePath}`);
+    console.log(`[Cloud Storage] Audio Storage URL: ${firebaseMediaUrl}`);
+
+    return firebaseMediaUrl;
   } catch (err: any) {
-    console.log(`[Cloud Storage] Upload skipped for ${fileName}. Operating with local audio storage.`);
-    isStorageAccessible = false; // Disable further upload attempts to avoid GCS noise
+    const msg = err?.message || String(err);
+    const isPermissionError =
+      msg.includes('storage.objects.create') ||
+      msg.includes('PERMISSION_DENIED') ||
+      msg.includes('403') ||
+      msg.includes('denied') ||
+      msg.includes('AccessDenied');
+
+    if (isPermissionError) {
+      if (!isStorageUploadDisabled) {
+        console.warn(`[Cloud Storage] Direct write access (storage.objects.create) on GCP bucket is restricted for Cloud Run runner. Operating gracefully with local server storage & Firestore.`);
+        isStorageUploadDisabled = true;
+      }
+    } else {
+      console.warn(`[Cloud Storage] Upload attempt skipped for ${fileName}:`, msg);
+    }
     return null;
   }
 }
@@ -851,6 +919,431 @@ app.post('/api/audio-versions/delete/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/api/audio-versions/clear-all', async (req, res) => {
+  try {
+    // 1. Clear in-memory stores
+    audioAssetsStore.clear();
+    locationVersionsMap.clear();
+    activeMappings = {};
+
+    // 2. Clear disk metadata and mappings
+    fs.writeFileSync(METADATA_FILE, JSON.stringify({}, null, 2));
+    fs.writeFileSync(MAPPINGS_FILE, JSON.stringify({}, null, 2));
+
+    // 3. Clear blob files
+    if (fs.existsSync(BLOBS_DIR)) {
+      const files = fs.readdirSync(BLOBS_DIR);
+      for (const file of files) {
+        try {
+          fs.unlinkSync(path.join(BLOBS_DIR, file));
+        } catch (e) {
+          console.warn('Failed to delete blob file:', file, e);
+        }
+      }
+    }
+
+    // 4. Clear Firestore documents if connected
+    if (isFirebaseConnected && firestoreDb && isFirestoreAccessible) {
+      try {
+        const snap = await firestoreDb.collection('blue_test_audio_versions').get();
+        if (!snap.empty) {
+          const batch = firestoreDb.batch();
+          snap.docs.forEach((doc) => batch.delete(doc.ref));
+          await batch.commit();
+        }
+        await firestoreDb.collection('blue_test_audio_settings').doc('audio_mappings').set({});
+      } catch (e: any) {
+        console.warn('Failed to clear Firestore audio records:', e);
+      }
+    }
+
+    // 5. Re-synthesize default clock sounds
+    autoEnsureClockAudio();
+
+    res.json({ success: true, message: 'All audio assets, cache, and versions cleared successfully.' });
+  } catch (err: any) {
+    console.error('Failed to clear audio versions:', err);
+    res.status(500).json({ error: err?.message || String(err) });
+  }
+});
+
+app.post('/api/audio-storage/sync-bucket', async (req, res) => {
+  try {
+    let pushedCount = 0;
+    let syncedCount = 0;
+
+    // 0. PUSH STEP: Upload all local audio assets to Cloud Storage (audio-storage/ folder) if not yet uploaded
+    if (storageBucket) {
+      for (const [id, record] of audioAssetsStore.entries()) {
+        let bufferToUpload = record.wavBuffer;
+        if (!bufferToUpload || bufferToUpload.length === 0) {
+          const blobPath = path.join(BLOBS_DIR, `${id}.wav`);
+          if (fs.existsSync(blobPath)) {
+            try {
+              bufferToUpload = fs.readFileSync(blobPath);
+              record.wavBuffer = bufferToUpload;
+            } catch (e) {
+              console.warn(`[Push Storage] Could not read blob for asset ${id}:`, e);
+            }
+          }
+        }
+
+        if (bufferToUpload && bufferToUpload.length > 0) {
+          const isLocalUrl = !(record as any).cloudUrl && (!(record as any).audioUrl || (record as any).audioUrl.startsWith('/api/'));
+          if (isLocalUrl || req.body?.forcePush) {
+            const ext = bufferToUpload.length >= 4 && bufferToUpload.toString('ascii', 0, 4) === 'RIFF' ? 'wav' : 'mp3';
+            const contentType = ext === 'wav' ? 'audio/wav' : 'audio/mp3';
+            const fileName = `${record.locationKey}_v${record.version || 1}.${ext}`;
+
+            const uploadedUrl = await uploadAudioToCloudStorage(fileName, bufferToUpload, contentType);
+            if (uploadedUrl) {
+              record.cloudUrl = uploadedUrl;
+              (record as any).audioUrl = uploadedUrl;
+              pushedCount++;
+
+              if (isFirebaseConnected && firestoreDb && isFirestoreAccessible) {
+                firestoreDb.collection('blue_test_audio_versions').doc(id).set({
+                  id: record.id,
+                  locationKey: record.locationKey,
+                  version: record.version || 1,
+                  scriptText: record.scriptText,
+                  voice: record.voice,
+                  model: record.model,
+                  audioUrl: uploadedUrl,
+                  cloudUrl: uploadedUrl,
+                  createdAt: record.createdAt,
+                  isActive: activeMappings[record.locationKey] === id,
+                  fileSizeBytes: bufferToUpload.length,
+                }, { merge: true }).catch(() => {});
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 1. Fetch from Firestore if available
+    if (isFirebaseConnected && firestoreDb && isFirestoreAccessible) {
+      try {
+        const snap = await firestoreDb.collection('blue_test_audio_versions').get();
+        if (!snap.empty) {
+          snap.docs.forEach((doc) => {
+            const data = doc.data();
+            if (data && data.id && data.locationKey) {
+              const existing = audioAssetsStore.get(data.id);
+              if (existing) {
+                if (data.cloudUrl || data.audioUrl) {
+                  existing.cloudUrl = data.cloudUrl || data.audioUrl;
+                  (existing as any).audioUrl = data.audioUrl || data.cloudUrl;
+                }
+              } else {
+                audioAssetsStore.set(data.id, data as any);
+              }
+              if (data.isActive) {
+                activeMappings[data.locationKey] = data.id;
+              }
+              syncedCount++;
+            }
+          });
+        }
+        const mappingDoc = await firestoreDb.collection('blue_test_audio_settings').doc('audio_mappings').get();
+        if (mappingDoc.exists) {
+          const remoteMappings = mappingDoc.data() || {};
+          Object.assign(activeMappings, remoteMappings);
+        }
+      } catch (e) {
+        console.warn('[Sync Storage] Firestore sync warning:', e);
+      }
+    }
+
+    // 2. Fetch from GCP Storage Bucket if available
+    if (storageBucket) {
+      try {
+        const [files] = await storageBucket.getFiles({ prefix: 'audio-storage/' });
+        const [rootFiles] = await storageBucket.getFiles({ prefix: '' });
+        const allFiles = [...files, ...rootFiles];
+
+        for (const file of allFiles) {
+          const name = path.basename(file.name);
+          const ext = path.extname(name).toLowerCase();
+          if (['.wav', '.mp3', '.m4a', '.ogg'].includes(ext)) {
+            const baseName = path.basename(name, ext);
+            const knownKeys = [
+              'pkg_intro', 'pkg_end',
+              ...Array.from({ length: 7 }, (_, i) => `session_${i + 1}_intro`),
+              ...Array.from({ length: 7 }, (_, i) => `blue_test_question_number_${i + 1}`),
+              ...Array.from({ length: 49 }, (_, i) => `blue_test_challenge_${String(i + 1).padStart(2, '0')}`),
+              ...Array.from({ length: 49 }, (_, i) => `blue_test_challenge_${i + 1}`),
+            ];
+
+            const matchedKey = knownKeys.find((k) => baseName.includes(k) || baseName === k);
+            if (matchedKey) {
+              const bucketNameStr = storageBucket.name || 'gen-lang-client-0589169162.firebasestorage.app';
+              const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketNameStr}/o/${encodeURIComponent(file.name)}?alt=media`;
+              const assetId = `gcs-${matchedKey}-${Date.now()}`;
+              
+              const existingAsset = Array.from(audioAssetsStore.values()).find(
+                (a) => a.locationKey === matchedKey && ((a as any).cloudUrl === publicUrl || (a as any).audioUrl === publicUrl)
+              );
+
+              if (!existingAsset) {
+                const newAsset = {
+                  id: assetId,
+                  locationKey: matchedKey,
+                  version: 1,
+                  scriptText: `Storage Bucket Asset: ${file.name}`,
+                  voice: 'Google Cloud Storage Asset',
+                  model: 'GCS Public URL',
+                  audioUrl: publicUrl,
+                  cloudUrl: publicUrl,
+                  createdAt: new Date().toISOString(),
+                  isActive: true,
+                  fileSizeBytes: file.metadata?.size ? parseInt(file.metadata.size, 10) : 0,
+                  durationSeconds: 5,
+                };
+                audioAssetsStore.set(assetId, newAsset as any);
+                if (!activeMappings[matchedKey]) {
+                  activeMappings[matchedKey] = assetId;
+                }
+                syncedCount++;
+              }
+            }
+          }
+        }
+      } catch (e: any) {
+        console.log('[Sync Storage] GCS bucket listing info:', e?.message || e);
+      }
+    }
+
+    saveAudioStore();
+    saveMappings();
+
+    const msg = pushedCount > 0
+      ? `Successfully pushed ${pushedCount} local audio files to Cloud Storage (audio-storage/) & synced ${syncedCount} items!`
+      : `Successfully synced ${syncedCount} audio assets from Cloud Storage & Firestore!`;
+
+    res.json({
+      success: true,
+      pushedCount,
+      syncedCount,
+      activeMappings,
+      message: msg,
+    });
+  } catch (err: any) {
+    console.error('Failed to sync storage audio:', err);
+    res.status(500).json({ error: err?.message || String(err) });
+  }
+});
+
+// Verify audio files in metadata.json against storage bucket contents
+app.post('/api/audio-storage/verify', async (req, res) => {
+  try {
+    let metadataStore: Record<string, AudioAssetRecord> = {};
+
+    // 1. Read metadata from disk metadata.json if available
+    if (fs.existsSync(METADATA_FILE)) {
+      try {
+        const raw = fs.readFileSync(METADATA_FILE, 'utf-8');
+        metadataStore = JSON.parse(raw);
+      } catch (e) {
+        console.warn('[Verify Storage] Could not parse metadata.json:', e);
+      }
+    }
+
+    // Merge in-memory records
+    for (const [id, rec] of audioAssetsStore.entries()) {
+      if (!metadataStore[id]) {
+        const { wavBuffer, ...rest } = rec;
+        metadataStore[id] = rest as any;
+      }
+    }
+
+    const bucketName = storageBucket?.name || 'gen-lang-client-0589169162.firebasestorage.app';
+    let bucketAccessible = false;
+    const bucketFilesSet = new Set<string>();
+
+    if (storageBucket) {
+      try {
+        const [files] = await storageBucket.getFiles({ prefix: 'audio-storage/' });
+        const [rootFiles] = await storageBucket.getFiles({ prefix: '' });
+        bucketAccessible = true;
+        for (const f of [...files, ...rootFiles]) {
+          bucketFilesSet.add(path.basename(f.name).toLowerCase());
+          bucketFilesSet.add(f.name.toLowerCase());
+        }
+      } catch (e: any) {
+        bucketAccessible = false;
+        console.warn('[Verify Storage] GCS bucket file listing info:', e?.message || e);
+      }
+    }
+
+    const items = [];
+    let verifiedCount = 0;
+    let localOnlyCount = 0;
+    let missingCount = 0;
+
+    const metadataEntries = Object.entries(metadataStore);
+
+    for (const [id, record] of metadataEntries) {
+      const ext = (record as any).cloudUrl?.toLowerCase().endsWith('.mp3') ? 'mp3' : 'wav';
+      const expectedFileName = `${record.locationKey}_v${record.version || 1}.${ext}`;
+      const blobPath = path.join(BLOBS_DIR, `${id}.wav`);
+      const hasLocalBlob = fs.existsSync(blobPath) || (audioAssetsStore.get(id)?.wavBuffer?.length ?? 0) > 0;
+
+      let isVerifiedInBucket = false;
+      if (record.cloudUrl && (record.cloudUrl.startsWith('http://') || record.cloudUrl.startsWith('https://'))) {
+        isVerifiedInBucket = true;
+      } else if (bucketFilesSet.has(expectedFileName.toLowerCase()) || bucketFilesSet.has(`audio-storage/${expectedFileName.toLowerCase()}`)) {
+        isVerifiedInBucket = true;
+      }
+
+      let status: 'VERIFIED' | 'MISSING' | 'LOCAL_ONLY' = 'MISSING';
+      if (isVerifiedInBucket) {
+        status = 'VERIFIED';
+        verifiedCount++;
+      } else if (hasLocalBlob) {
+        status = 'LOCAL_ONLY';
+        localOnlyCount++;
+      } else {
+        status = 'MISSING';
+        missingCount++;
+      }
+
+      items.push({
+        id,
+        locationKey: record.locationKey,
+        version: record.version || 1,
+        fileName: expectedFileName,
+        status,
+        cloudUrl: record.cloudUrl || (record as any).audioUrl,
+        fileSizeBytes: (record as any).fileSizeBytes || (hasLocalBlob && fs.existsSync(blobPath) ? fs.statSync(blobPath).size : 0),
+      });
+    }
+
+    const summaryReport = metadataEntries.length === 0
+      ? `No audio files registered in metadata.json yet.`
+      : `Verified ${verifiedCount}/${metadataEntries.length} audio assets in metadata.json against Storage Bucket '${bucketName}'. (${localOnlyCount} stored locally, ${missingCount} missing)`;
+
+    res.json({
+      timestamp: new Date().toISOString(),
+      bucketName,
+      bucketAccessible,
+      totalInMetadata: metadataEntries.length,
+      verifiedCount,
+      missingCount,
+      localOnlyCount,
+      summaryReport,
+      items,
+    });
+  } catch (err: any) {
+    console.error('Failed to verify storage metadata:', err);
+    res.status(500).json({ error: err?.message || String(err) });
+  }
+});
+
+// Manual Audio File Upload or Custom URL Mapping
+app.post('/api/audio-storage/upload-manual', async (req, res) => {
+  try {
+    const { locationKey, fileName, base64Data, audioUrl, scriptText, voice = 'Manual Audio File Upload' } = req.body;
+
+    if (!locationKey) {
+      res.status(400).json({ error: 'locationKey is required' });
+      return;
+    }
+
+    const currentVersion = (locationVersionsMap.get(locationKey) || 0) + 1;
+    locationVersionsMap.set(locationKey, currentVersion);
+
+    const assetId = `manual-${locationKey}-v${currentVersion}-${Date.now()}`;
+    const createdAt = new Date().toISOString();
+
+    let bufferToSave: Buffer = Buffer.alloc(0);
+    let cloudUrl: string | null = null;
+    let dataUrl: string = audioUrl || '';
+
+    if (base64Data) {
+      const cleanBase64 = base64Data.replace(/^data:audio\/[a-z0-9]+;base64,/, '');
+      bufferToSave = Buffer.from(cleanBase64, 'base64');
+
+      const fileExt = fileName && fileName.toLowerCase().endsWith('.mp3') ? 'mp3' : 'wav';
+      const uploadFileName = `${locationKey}_v${currentVersion}.${fileExt}`;
+      const contentType = fileExt === 'mp3' ? 'audio/mp3' : 'audio/wav';
+
+      cloudUrl = await uploadAudioToCloudStorage(uploadFileName, bufferToSave, contentType);
+      dataUrl = cloudUrl || `/api/tts/audio/${assetId}`;
+    } else if (audioUrl) {
+      dataUrl = audioUrl;
+      cloudUrl = audioUrl;
+    } else {
+      res.status(400).json({ error: 'Either base64Data or audioUrl must be provided' });
+      return;
+    }
+
+    const record: AudioAssetRecord = {
+      id: assetId,
+      locationKey,
+      version: currentVersion,
+      scriptText: scriptText?.trim() || `Manual Upload/Mapped Audio for ${locationKey}`,
+      voice: voice || 'Manual File / URL Mapping',
+      model: 'Manual Replacement File',
+      wavBuffer: bufferToSave,
+      createdAt,
+      cloudUrl: cloudUrl || undefined,
+    };
+
+    audioAssetsStore.set(assetId, record);
+    activeMappings[locationKey] = assetId;
+
+    saveAudioStore();
+    saveMappings();
+
+    if (isFirebaseConnected && firestoreDb && isFirestoreAccessible) {
+      firestoreDb.collection('blue_test_audio_versions').doc(assetId).set({
+        id: assetId,
+        locationKey,
+        version: currentVersion,
+        scriptText: record.scriptText,
+        voice: record.voice,
+        model: record.model,
+        audioUrl: dataUrl,
+        cloudUrl: cloudUrl || null,
+        createdAt,
+        isActive: true,
+        fileSizeBytes: bufferToSave.length,
+        durationSeconds: Math.round((bufferToSave.length / (24000 * 2)) * 10) / 10,
+      }).catch((e: any) => {
+        if (e?.code === 7 || (e?.message && e.message.includes('PERMISSION_DENIED'))) {
+          isFirestoreAccessible = false;
+        }
+      });
+
+      firestoreDb.collection('blue_test_audio_settings').doc('audio_mappings').set(activeMappings, { merge: true }).catch(() => {});
+    }
+
+    res.json({
+      success: true,
+      asset: {
+        id: assetId,
+        locationKey,
+        version: currentVersion,
+        scriptText: record.scriptText,
+        voice: record.voice,
+        model: record.model,
+        audioUrl: dataUrl,
+        cloudUrl: cloudUrl || null,
+        createdAt,
+        isActive: true,
+        fileSizeBytes: bufferToSave.length,
+        durationSeconds: Math.round((bufferToSave.length / (24000 * 2)) * 10) / 10,
+      },
+      message: `Successfully uploaded & mapped manual audio version v${currentVersion} for ${locationKey}!`,
+    });
+  } catch (err: any) {
+    console.error('Manual audio upload failed:', err);
+    res.status(500).json({ error: err?.message || String(err) });
+  }
+});
+
 
 
 // Serve audio binary
@@ -971,6 +1464,131 @@ app.post('/api/tts/generate', async (req, res) => {
       return;
     }
 
+    const provider = req.body.provider || 'gemini';
+
+    // DEEPGRAM TTS PROVIDER BRANCH
+    if (provider === 'deepgram') {
+      const deepgramApiKey = (req.body.deepgramApiKey && String(req.body.deepgramApiKey).trim()) || process.env.DEEPGRAM_API_KEY;
+      if (!deepgramApiKey) {
+        res.status(400).json({
+          error: 'Deepgram API Key is required. Please input your Deepgram API Key in Audio Studio settings or set DEEPGRAM_API_KEY in environment.',
+        });
+        return;
+      }
+
+      if (!scriptText || !scriptText.trim()) {
+        res.status(400).json({ error: 'scriptText is required' });
+        return;
+      }
+
+      const model = (req.body.deepgramModel && String(req.body.deepgramModel).trim()) || 'flux-alexis-en';
+      const isFlux = model.startsWith('flux-');
+      const endpoint = isFlux
+        ? `https://api.deepgram.com/v2/speak?model=${encodeURIComponent(model)}`
+        : `https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}`;
+
+      const dgResponse = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${deepgramApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: scriptText.trim(),
+        }),
+      });
+
+      if (!dgResponse.ok) {
+        const errText = await dgResponse.text();
+        console.error('[Deepgram TTS Error]', dgResponse.status, errText);
+        res.status(dgResponse.status).json({
+          error: `Deepgram TTS API error (${dgResponse.status}): ${errText || 'Failed to generate TTS audio via Deepgram'}`,
+        });
+        return;
+      }
+
+      const arrayBuf = await dgResponse.arrayBuffer();
+      const audioBuffer = Buffer.from(arrayBuf);
+      if (audioBuffer.length === 0) {
+        res.status(500).json({ error: 'Deepgram returned empty audio response.' });
+        return;
+      }
+
+      const isWav = audioBuffer.length >= 4 && audioBuffer.toString('ascii', 0, 4) === 'RIFF';
+      const contentType = isWav ? 'audio/wav' : 'audio/mp3';
+      const ext = isWav ? 'wav' : 'mp3';
+
+      const currentVersion = (locationVersionsMap.get(locationKey) || 0) + 1;
+      locationVersionsMap.set(locationKey, currentVersion);
+
+      const assetId = `dg-${locationKey}-v${currentVersion}-${Date.now()}`;
+      const createdAt = new Date().toISOString();
+
+      const fileName = `${locationKey}_v${currentVersion}.${ext}`;
+      const cloudUrl = await uploadAudioToCloudStorage(fileName, audioBuffer, contentType);
+      const dataUrl = cloudUrl || `/api/tts/audio/${assetId}`;
+
+      const record: AudioAssetRecord = {
+        id: assetId,
+        locationKey,
+        version: currentVersion,
+        scriptText: scriptText.trim(),
+        voice: model,
+        model: `Deepgram (${model})`,
+        wavBuffer: audioBuffer,
+        createdAt,
+        cloudUrl: cloudUrl || undefined,
+      };
+
+      audioAssetsStore.set(assetId, record);
+      activeMappings[locationKey] = assetId;
+
+      const durationSeconds = Math.round((audioBuffer.length / (24000 * 2)) * 10) / 10 || 3;
+
+      saveAudioStore();
+      saveMappings();
+
+      if (isFirebaseConnected && firestoreDb && isFirestoreAccessible) {
+        firestoreDb.collection('blue_test_audio_versions').doc(assetId).set({
+          id: assetId,
+          locationKey,
+          version: currentVersion,
+          scriptText: record.scriptText,
+          voice: record.voice,
+          model: record.model,
+          audioUrl: dataUrl,
+          cloudUrl: cloudUrl || null,
+          createdAt,
+          isActive: true,
+          fileSizeBytes: audioBuffer.length,
+          durationSeconds,
+        }).catch((e: any) => {
+          if (e?.code === 7 || (e?.message && e.message.includes('PERMISSION_DENIED'))) {
+            isFirestoreAccessible = false;
+          }
+        });
+      }
+
+      res.json({
+        success: true,
+        asset: {
+          id: assetId,
+          locationKey,
+          version: currentVersion,
+          scriptText: scriptText.trim(),
+          voice: record.voice,
+          model: record.model,
+          audioUrl: dataUrl,
+          cloudUrl: cloudUrl || null,
+          createdAt,
+          isActive: true,
+          fileSizeBytes: audioBuffer.length,
+          durationSeconds,
+        },
+      });
+      return;
+    }
+
     if (!scriptText || !scriptText.trim()) {
       res.status(400).json({ error: 'scriptText is required' });
       return;
@@ -997,7 +1615,7 @@ app.post('/api/tts/generate', async (req, res) => {
 
     let promptInput = scriptText.trim();
     if (locationKey.startsWith('blue_test_challenge_')) {
-      promptInput = `Generate a short single-speaker Blue Test challenge announcement. Use the configured Kore voice. Speak in clear international English with a firm, calm, precise assessment-facilitator delivery. Insert a brief, slight natural micro-pause (approx 100-200ms) immediately after the words "CHUNKS NUMBER" After the pause, pronounce the following number as one isolated English number word. Speak "T C T" as three separate English letters with slight separation. Keep a natural short pause between sentences. "Get ready" should sound attentive and prepared, not excited. Speak only the supplied transcript. Do not add, remove, summarize, or paraphrase words. Do not vocalize punctuation, ellipses, labels, or instructions. No music and no sound effects.
+      promptInput = `Generate a short single-speaker Blue Test challenge announcement. Use the configured Kore voice. Speak in clear international English with a firm, calm, precise assessment-facilitator delivery. Insert a brief, slight natural micro-pause (approx 100-200ms) immediately after the words "CHUNKS NUMBER" After the pause, pronounce the following number as one isolated English number word. Speak "T D T" as three separate English letters with slight separation. Keep a natural short pause between sentences. "Get ready" should sound attentive and prepared, not excited. Speak only the supplied transcript. Do not add, remove, summarize, or paraphrase words. Do not vocalize punctuation, ellipses, labels, or instructions. No music and no sound effects.
 
 BEGIN_TRANSCRIPT
 ${scriptText.trim()}
@@ -1143,6 +1761,25 @@ END_TRANSCRIPT`;
   } catch (err: unknown) {
     console.error('Error generating Gemini TTS:', err);
     const message = err instanceof Error ? err.message : String(err);
+    const isQuotaError = message.includes('429') || 
+                         message.includes('Quota exceeded') || 
+                         message.includes('too_many_requests') || 
+                         message.includes('rate-limits') || 
+                         message.includes('RESOURCE_EXHAUSTED') ||
+                         message.includes('prepayment') ||
+                         message.includes('credits') ||
+                         message.includes('depleted') ||
+                         message.includes('billing');
+
+    if (isQuotaError) {
+      res.status(429).json({
+        success: false,
+        quotaExceeded: true,
+        error: 'Gemini TTS quota or prepayment credit limit reached. The test room automatically falls back to Browser Web Speech API narration.',
+      });
+      return;
+    }
+
     res.status(500).json({ error: `Gemini TTS Generation Failed: ${message}` });
   }
 });

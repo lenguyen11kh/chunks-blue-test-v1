@@ -9,3 +9,4 @@ coverage/
 *.tar.gz
 *.zip
 audio-storage-backup/
+audio-storage/

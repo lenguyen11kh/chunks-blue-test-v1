@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Learner } from '../../types/common';
-import { AudioSettings, BlueAssignment } from '../../types/blue-test';
+import { AudioSettings, BlueAssignment, BlueTestMode } from '../../types/blue-test';
 import { BlueTestStorageAdapter } from '../../persistence/blue-test-storage';
 import { generateDefaultBluePackage } from '../../domain/blue-test/timing-engine';
 import { LearnerSetupModule } from './LearnerSetupModule';
-import { Sparkles, Play, Volume2, ListOrdered, FileSpreadsheet, ChevronDown, ChevronUp, Layers, HelpCircle, Bell, Clock, CheckCircle2, HardDrive, RefreshCw, RotateCcw, PlusCircle, X } from 'lucide-react';
+import { Sparkles, Play, Volume2, ListOrdered, FileSpreadsheet, ChevronDown, ChevronUp, Layers, HelpCircle, Bell, Clock, CheckCircle2, HardDrive, RefreshCw, RotateCcw, PlusCircle, X, Anchor, ShieldAlert, Activity } from 'lucide-react';
 
 export type PreferenceSyncStatus = 'synced' | 'local_only' | 'saving' | null;
 
@@ -92,7 +92,7 @@ interface BlueTestSetupProps {
   syncStatus?: PreferenceSyncStatus;
   onSyncNow?: () => void;
   syncFeedbackMessage?: string | null;
-  onStartTest: (chosenAssignment?: BlueAssignment) => void;
+  onStartTest: (chosenAssignment?: BlueAssignment, mode?: BlueTestMode) => void;
   onOpenAdminFixture: () => void;
   onOpenAudioManagement?: () => void;
 }
@@ -329,20 +329,37 @@ export const BlueTestSetup: React.FC<BlueTestSetupProps> = ({
   onOpenAudioManagement,
 }) => {
   const defaultPkg = generateDefaultBluePackage();
+  const [selectedMode, setSelectedMode] = useState<BlueTestMode>(() => 
+    audioSettings?.hideStandardTestMode ? 'captain' : 'standard'
+  );
   const [activeAssignmentToPrompt, setActiveAssignmentToPrompt] = useState<BlueAssignment | null>(null);
 
-  const handleStartTestClick = () => {
+  useEffect(() => {
+    if (audioSettings?.hideStandardTestMode && selectedMode === 'standard') {
+      setSelectedMode('captain');
+    }
+  }, [audioSettings?.hideStandardTestMode, selectedMode]);
+
+  const handleStartTestClick = (modeOverride?: BlueTestMode) => {
     if (!selectedLearner) return;
+    const modeToUse = modeOverride || selectedMode;
 
     const existing = BlueTestStorageAdapter.getAssignments().find(
       (a) => a.learnerId === selectedLearner.id && a.status !== 'completed'
     );
 
     if (existing) {
+      existing.testMode = modeToUse;
+      BlueTestStorageAdapter.saveAssignment(existing);
       setActiveAssignmentToPrompt(existing);
     } else {
-      const newAssignment = BlueTestStorageAdapter.createNewAssignment(selectedLearner.id);
-      onStartTest(newAssignment);
+      const newAssignment = BlueTestStorageAdapter.createNewAssignment(
+        selectedLearner.id,
+        'blue-pkg-v1',
+        'Teacher',
+        modeToUse
+      );
+      onStartTest(newAssignment, modeToUse);
     }
   };
 
@@ -365,18 +382,111 @@ export const BlueTestSetup: React.FC<BlueTestSetupProps> = ({
             </p>
           </div>
 
-          <button
-            onClick={handleStartTestClick}
-            disabled={!selectedLearner}
-            className={`w-full md:w-auto px-6 py-3.5 rounded-2xl font-bold text-sm shadow-xl transition-all flex items-center justify-center gap-2.5 ${
-              selectedLearner 
-                ? 'bg-blue-600 hover:bg-blue-500 text-white hover:shadow-blue-500/25 ring-2 ring-blue-400/40' 
-                : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            {!audioSettings?.hideStandardTestMode && (
+              <button
+                onClick={() => handleStartTestClick('standard')}
+                disabled={!selectedLearner}
+                className={`w-full sm:w-auto px-5 py-3.5 rounded-2xl font-bold text-xs sm:text-sm shadow-xl transition-all flex items-center justify-center gap-2 ${
+                  selectedLearner 
+                    ? 'bg-blue-600 hover:bg-blue-500 text-white hover:shadow-blue-500/25 ring-2 ring-blue-400/40' 
+                    : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                <Play className="w-4 h-4 fill-current" />
+                <span>Launch Test Room</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => handleStartTestClick('captain')}
+              disabled={!selectedLearner}
+              className={`w-full sm:w-auto px-5 py-3.5 rounded-2xl font-bold text-xs sm:text-sm shadow-xl transition-all flex items-center justify-center gap-2 ${
+                selectedLearner 
+                  ? 'bg-purple-600 hover:bg-purple-500 text-white hover:shadow-purple-500/25 ring-2 ring-purple-400/40' 
+                  : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+              }`}
+            >
+              <Anchor className="w-4 h-4 text-purple-200" />
+              <span>Launch Captain Test</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Test Mode Selection Cards */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+              <Activity className="w-4 h-4 text-cyan-400" />
+              Select Observation Test Mode
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Choose the primary observation protocol before launching the room
+            </p>
+          </div>
+          <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase bg-slate-800 text-slate-300 border border-slate-700">
+            Selected: {selectedMode === 'standard' ? '🔵 Standard Test Room' : '⚓ Captain Test Room'}
+          </span>
+        </div>
+
+        <div className={`grid grid-cols-1 ${audioSettings?.hideStandardTestMode ? '' : 'md:grid-cols-2'} gap-4`}>
+          {/* Mode 1 Card: Standard Test Room (Hidden if hideStandardTestMode is active) */}
+          {!audioSettings?.hideStandardTestMode && (
+            <div
+              onClick={() => setSelectedMode('standard')}
+              className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-start gap-4 ${
+                selectedMode === 'standard'
+                  ? 'bg-blue-950/60 border-blue-500 text-white shadow-lg shadow-blue-950/50'
+                  : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+              }`}
+            >
+              <div className={`p-3 rounded-2xl shrink-0 ${
+                selectedMode === 'standard' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'
+              }`}>
+                <Play className="w-6 h-6 fill-current" />
+              </div>
+              <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-extrabold text-sm text-white">Standard Test Room</h4>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    %i Conscious Flow
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Measures 7-color spectrum transitions, threshold conscious timing (TCT/MCT), and computes %i maintained conscious flow.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Mode 2 Card: Captain Test Room */}
+          <div
+            onClick={() => setSelectedMode('captain')}
+            className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-start gap-4 ${
+              selectedMode === 'captain'
+                ? 'bg-purple-950/60 border-purple-500 text-white shadow-lg shadow-purple-950/50'
+                : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
             }`}
           >
-            <Play className="w-4 h-4 fill-current" />
-            Launch Observation Room
-          </button>
+            <div className={`p-3 rounded-2xl shrink-0 ${
+              selectedMode === 'captain' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400'
+            }`}>
+              <Anchor className="w-6 h-6" />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <div className="flex items-center gap-2">
+                <h4 className="font-extrabold text-sm text-white">Captain Test Room</h4>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  Captain CT Model
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Measures independent Captain Time ($DT$), computes %CPD Captain Stop rate, fastest Captain Time, and divergent analysis.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -433,6 +543,30 @@ export const BlueTestSetup: React.FC<BlueTestSetupProps> = ({
                 className="w-4 h-4 text-blue-600 rounded-md focus:ring-blue-500"
               />
             </label>
+
+            <div className="pt-2 border-t border-slate-100">
+              <label className="flex items-center justify-between p-3 bg-purple-50/80 rounded-2xl border border-purple-200/80 cursor-pointer hover:bg-purple-100/80 transition-colors">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-purple-900 text-xs">Admin: Hide Standard Test Mode</p>
+                    <span className="px-2 py-0.5 text-[9px] font-extrabold uppercase bg-purple-200 text-purple-800 rounded-md">
+                      Admin
+                    </span>
+                  </div>
+                  <p className="text-purple-700 text-[11px]">
+                    Hide Standard Test Room option and default to Captain Test Mode
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={Boolean(audioSettings?.hideStandardTestMode)}
+                  onChange={(e) =>
+                    onUpdateAudioSettings({ ...audioSettings, hideStandardTestMode: e.target.checked })
+                  }
+                  className="w-4 h-4 text-purple-600 rounded-md focus:ring-purple-500 cursor-pointer"
+                />
+              </label>
+            </div>
 
             {onOpenAudioManagement && (
               <button
@@ -517,39 +651,72 @@ export const BlueTestSetup: React.FC<BlueTestSetupProps> = ({
 
             {/* Modal Action Buttons */}
             <div className="space-y-3 pt-2">
-              {/* Option 1: Resume Active Test (Blue Button) */}
+              {/* Option 1: Resume in Standard Test Room */}
               <button
                 type="button"
                 onClick={() => {
                   const ass = activeAssignmentToPrompt;
+                  ass.testMode = 'standard';
+                  BlueTestStorageAdapter.saveAssignment(ass);
                   setActiveAssignmentToPrompt(null);
-                  onStartTest(ass);
+                  onStartTest(ass, 'standard');
                 }}
-                className="w-full py-3.5 px-5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs sm:text-sm shadow-lg hover:shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer border border-blue-400/30"
+                className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-lg hover:shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer border border-blue-400/30"
               >
-                <RotateCcw className="w-4 h-4 shrink-0" />
-                <span>🔄 Resume Active Test (Progress: Question {activeAssignmentToPrompt.currentGlobalOrder}/49)</span>
+                <Play className="w-4 h-4 shrink-0 fill-current" />
+                <span>🔵 Resume in Standard Test Room (Q{activeAssignmentToPrompt.currentGlobalOrder}/49)</span>
               </button>
 
-              {/* Option 2: Start Fresh Test (Emerald/Green Button) */}
+              {/* Option 2: Resume in Captain Test Room */}
               <button
                 type="button"
                 onClick={() => {
-                  const newAssignment = BlueTestStorageAdapter.createNewAssignment(selectedLearner.id);
+                  const ass = activeAssignmentToPrompt;
+                  ass.testMode = 'captain';
+                  BlueTestStorageAdapter.saveAssignment(ass);
                   setActiveAssignmentToPrompt(null);
-                  onStartTest(newAssignment);
+                  onStartTest(ass, 'captain');
                 }}
-                className="w-full py-3.5 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs sm:text-sm shadow-lg hover:shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer border border-emerald-400/30"
+                className="w-full py-3 px-4 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-lg hover:shadow-purple-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer border border-purple-400/30"
               >
-                <PlusCircle className="w-4 h-4 shrink-0" />
-                <span>🆕 Start Fresh Test (Start from Question 1)</span>
+                <Anchor className="w-4 h-4 shrink-0" />
+                <span>⚓ Resume in Captain Test Room (Q{activeAssignmentToPrompt.currentGlobalOrder}/49)</span>
               </button>
+
+              {/* Option 3: Start Fresh Test */}
+              <div className="pt-2 border-t border-slate-800/80 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newAssignment = BlueTestStorageAdapter.createNewAssignment(selectedLearner.id, 'blue-pkg-v1', 'Teacher', 'standard');
+                    setActiveAssignmentToPrompt(null);
+                    onStartTest(newAssignment, 'standard');
+                  }}
+                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500/40 border border-slate-700 text-slate-200 font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <PlusCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span>Fresh Standard</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newAssignment = BlueTestStorageAdapter.createNewAssignment(selectedLearner.id, 'blue-pkg-v1', 'Teacher', 'captain');
+                    setActiveAssignmentToPrompt(null);
+                    onStartTest(newAssignment, 'captain');
+                  }}
+                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-purple-600/30 hover:border-purple-500/40 border border-slate-700 text-slate-200 font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <PlusCircle className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                  <span>Fresh Captain</span>
+                </button>
+              </div>
 
               {/* Back / Cancel Button */}
               <button
                 type="button"
                 onClick={() => setActiveAssignmentToPrompt(null)}
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors cursor-pointer"
+                className="w-full py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 font-semibold text-xs transition-colors cursor-pointer"
               >
                 Cancel
               </button>

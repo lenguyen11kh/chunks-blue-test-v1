@@ -138,8 +138,8 @@ export const BlueTestCsvImport: React.FC<Props> = ({ onImport, onCancel }) => {
            throw new Error(`Row ${i+1}: Missing "CHUNKS NUMBER:" in spoken script`);
         }
         
-        if (!r.spoken_script.includes('T C T')) {
-           throw new Error(`Row ${i+1}: Missing "T C T" in spoken script`);
+        if (!r.spoken_script.includes('T D T') && !r.spoken_script.includes('T C T')) {
+           throw new Error(`Row ${i+1}: Missing "T D T" in spoken script`);
         }
         
         if (isNaN(r.tct_seconds_raw) || r.tct_seconds_raw < 0) {

@@ -41,6 +41,8 @@ export interface BlueTestPackage {
   questions: BlueQuestionDefinition[];
 }
 
+export type BlueTestMode = 'standard' | 'captain';
+
 export interface BlueAssignment {
   id: string;
   learnerId: string;
@@ -51,6 +53,7 @@ export interface BlueAssignment {
   completedAt?: string;
   currentGlobalOrder: number; // 1..49
   currentSessionNumber: number; // 1..7
+  testMode?: BlueTestMode; // 'standard' | 'captain'
 }
 
 export interface BlueSessionRun {
@@ -139,6 +142,7 @@ export interface AudioSettings {
   autoplayQuestionCue?: boolean;
   autoplayPackageEnd: boolean;
   enableBells: boolean;
+  hideStandardTestMode?: boolean; // Admin Option: Hide Standard Test Mode
 }
 
 export type NarrationLocationKey = string;
@@ -164,6 +168,28 @@ export interface BlueAudioLocationInfo {
   defaultScript: string;
   activeVersionId: string | null;
   versions: BlueAudioVersion[];
+}
+
+export interface StorageVerificationItem {
+  id: string;
+  locationKey: NarrationLocationKey;
+  version: number;
+  fileName: string;
+  status: 'VERIFIED' | 'MISSING' | 'LOCAL_ONLY';
+  cloudUrl?: string;
+  fileSizeBytes?: number;
+}
+
+export interface AudioStorageVerificationReport {
+  timestamp: string;
+  bucketName: string;
+  bucketAccessible: boolean;
+  totalInMetadata: number;
+  verifiedCount: number;
+  missingCount: number;
+  localOnlyCount: number;
+  summaryReport: string;
+  items: StorageVerificationItem[];
 }
 
 export type ChallengeCellStatus = 'passed' | 'failed' | 'not_attempted';

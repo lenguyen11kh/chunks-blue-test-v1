@@ -111,6 +111,30 @@ export function deriveSevenColor(elapsedSeconds: number, maxTimeSecondsRaw: numb
 }
 
 /**
+ * Derives the Captain reversed seven-color scale (Purple -> Indigo -> Blue -> Green -> Yellow -> Orange -> Red).
+ * Scale:
+ * - 0s..14% TDT (0..1/7): Purple (#A855F7)
+ * - 14%..28% TDT (1/7..2/7): Indigo (#4F46E5)
+ * - 28%..42% TDT (2/7..3/7): Blue (#3B82F6)
+ * - 42%..57% TDT (3/7..4/7): Green (#22C55E)
+ * - 57%..71% TDT (4/7..5/7): Yellow (#EAB308)
+ * - 71%..85% TDT (5/7..6/7): Orange (#F97316)
+ * - 85%..100% TDT (6/7..100%): Red (#EF4444)
+ */
+export function deriveCaptainReversedSevenColor(elapsedSeconds: number, maxTimeSecondsRaw: number): SevenColor {
+  if (maxTimeSecondsRaw <= 0) return 'purple';
+  const ratio = Math.max(0, Math.min(1, elapsedSeconds / maxTimeSecondsRaw));
+
+  if (ratio >= 1.0) {
+    return 'red';
+  }
+
+  const reversedOrder: SevenColor[] = ['purple', 'indigo', 'blue', 'green', 'yellow', 'orange', 'red'];
+  const index = Math.min(6, Math.floor(ratio * 7));
+  return reversedOrder[index];
+}
+
+/**
  * Returns true if the color is a "hot" color (Red, Orange, Yellow).
  */
 export function isHotColor(color: SevenColor): boolean {

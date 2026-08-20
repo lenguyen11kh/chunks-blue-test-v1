@@ -6,6 +6,7 @@ export interface TeacherAudioSettings {
   autoplayChallengeAudio: boolean;
   timerSoundEnabled: boolean;
   timerSoundVolume: number;
+  hideStandardTestMode?: boolean;
 }
 
 const DEFAULT_SETTINGS: TeacherAudioSettings = {
@@ -13,7 +14,8 @@ const DEFAULT_SETTINGS: TeacherAudioSettings = {
   autoplaySessionIntro: false,
   autoplayChallengeAudio: true, // Default to true based on previous Green Test? Will check below
   timerSoundEnabled: true,
-  timerSoundVolume: 0.5
+  timerSoundVolume: 0.5,
+  hideStandardTestMode: false,
 };
 
 export class TeacherPreferencesService {

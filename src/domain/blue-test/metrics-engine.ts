@@ -193,3 +193,97 @@ export function calculateChallengeMatrix(attempts: BlueQuestionAttempt[]): Chall
   };
 }
 
+export interface CaptainDisruptionMetrics {
+  n: number; // Disrupted question count
+  crewCount: number; // Non-disrupted question count (49 - n)
+  attemptedCount: number; // Finalized completed question count
+  unattemptedCount: number; // Pending / unattempted question count (49 - attemptedCount)
+  nonDisruptedAttemptedCount: number; // Completed questions where MCT = TDT
+  cpdPercent: number; // %CPD = (n / 49) * 100
+  minDt: number; // min(DT 1..n)
+  totalPercentX: number; // Sum(%x_i) / 49
+  totalPercentXDisplay: number; // Sum(%x_i) / 49 * 100
+  captainPercentI: number; // %i = (1 - Avg%x) / CoC * 100
+  coc: number;
+}
+
+/**
+ * Calculates Captain Disruption metrics across all 49 questions using CoC parameter.
+ */
+export function calculateCaptainDisruptionMetrics(
+  attempts: BlueQuestionAttempt[],
+  coc: number = 1.2
+): CaptainDisruptionMetrics {
+  const totalQuestions = 49;
+  const finalizedAttemptsByOrder = new Map<number, BlueQuestionAttempt>();
+
+  for (const attempt of attempts) {
+    if (attempt.finalizedAt) {
+      finalizedAttemptsByOrder.set(attempt.globalQuestionOrder, attempt);
+    }
+  }
+
+  let n = 0;
+  let attemptedCount = 0;
+  let nonDisruptedAttemptedCount = 0;
+  let sumPercentX = 0;
+  let minDt = Infinity;
+
+  for (let k = 1; k <= totalQuestions; k++) {
+    const sessionNumber = Math.ceil(k / 7);
+    const questionInSession = ((k - 1) % 7) + 1;
+    const attempt = finalizedAttemptsByOrder.get(k);
+
+    const tdt = attempt?.maxTimeSecondsRaw ?? calculateMaxConsciousTimeRaw(sessionNumber, questionInSession);
+
+    if (attempt) {
+      attemptedCount++;
+      const mct = attempt.effectiveElapsedSeconds ?? attempt.elapsedSecondsRaw;
+      const mctRounded = Number(mct.toFixed(2));
+      const tdtRounded = Number(tdt.toFixed(2));
+
+      if (mctRounded < tdtRounded) {
+        // Disrupted question
+        n++;
+        const dt_i = mct;
+        const percentX_i = Math.max(0, Math.min(1, dt_i / tdt));
+        sumPercentX += percentX_i;
+        if (dt_i < minDt) {
+          minDt = dt_i;
+        }
+      } else {
+        // Non-disrupted completed question (MCT = TCT) -> %x_i = 1.0 (100%)
+        nonDisruptedAttemptedCount++;
+        sumPercentX += 1.0;
+      }
+    } else {
+      // Unattempted question -> %x_i = 1.0 (100%) for 49-question base
+      sumPercentX += 1.0;
+    }
+  }
+
+  const unattemptedCount = totalQuestions - attemptedCount;
+  const crewCount = totalQuestions - n;
+  const cpdPercent = (n / totalQuestions) * 100;
+  const finalMinDt = n > 0 && minDt !== Infinity ? minDt : 0;
+  const totalPercentX = sumPercentX / totalQuestions;
+  const totalPercentXDisplay = totalPercentX * 100;
+
+  const activeCoc = coc > 0 ? coc : 1.2;
+  const captainPercentI = ((1 - totalPercentX) / activeCoc) * 100;
+
+  return {
+    n,
+    crewCount,
+    attemptedCount,
+    unattemptedCount,
+    nonDisruptedAttemptedCount,
+    cpdPercent,
+    minDt: finalMinDt,
+    totalPercentX,
+    totalPercentXDisplay,
+    captainPercentI,
+    coc: activeCoc,
+  };
+}
+

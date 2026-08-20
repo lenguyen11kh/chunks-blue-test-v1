@@ -7,6 +7,7 @@ import {
   CompletionMode,
   AuditEventType,
   AudioSettings,
+  BlueTestMode,
 } from '../types/blue-test';
 import { Learner } from '../types/common';
 
@@ -296,19 +297,29 @@ export class BlueTestStorageAdapter {
     setStorageItem(STORAGE_KEYS.EVENTS, []);
   }
 
-  static createAssignment(learnerId: string, packageVersionId: string = 'blue-pkg-v1', assignedBy: string = 'Teacher'): BlueAssignment {
+  static createAssignment(
+    learnerId: string,
+    packageVersionId: string = 'blue-pkg-v1',
+    assignedBy: string = 'Teacher',
+    testMode: BlueTestMode = 'standard'
+  ): BlueAssignment {
     const existing = this.getAssignments().find((a) => a.learnerId === learnerId && a.status !== 'completed');
     if (existing) {
+      if (testMode && existing.testMode !== testMode) {
+        existing.testMode = testMode;
+        this.saveAssignment(existing);
+      }
       return existing;
     }
 
-    return this.createNewAssignment(learnerId, packageVersionId, assignedBy);
+    return this.createNewAssignment(learnerId, packageVersionId, assignedBy, testMode);
   }
 
   static createNewAssignment(
     learnerId: string,
     packageVersionId: string = 'blue-pkg-v1',
-    assignedBy: string = 'Teacher'
+    assignedBy: string = 'Teacher',
+    testMode: BlueTestMode = 'standard'
   ): BlueAssignment {
     const newAssignment: BlueAssignment = {
       id: `blue-assign-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -319,6 +330,7 @@ export class BlueTestStorageAdapter {
       assignedBy,
       currentGlobalOrder: 1,
       currentSessionNumber: 1,
+      testMode,
     };
 
     this.saveAssignment(newAssignment);
@@ -658,6 +670,7 @@ export class BlueTestStorageAdapter {
       autoplayQuestionNumber: true, // Default: ON so Question Number cue plays on transition
       autoplayPackageEnd: false,
       enableBells: true,
+      hideStandardTestMode: false,
     };
     const saved = getStorageItem<Partial<AudioSettings>>(STORAGE_KEYS.AUDIO_SETTINGS, {});
     const autoplayTestIntro = saved.autoplayTestIntro ?? saved.autoplayPackageIntro ?? defaultSettings.autoplayPackageIntro;
@@ -668,6 +681,7 @@ export class BlueTestStorageAdapter {
       autoplayPackageIntro: autoplayTestIntro,
       autoplayTestIntro,
       autoplayQuestionNumber,
+      hideStandardTestMode: Boolean(saved.hideStandardTestMode),
     };
   }
 
@@ -678,6 +692,7 @@ export class BlueTestStorageAdapter {
       autoplayPackageIntro: autoplayTestIntro,
       autoplayTestIntro,
       autoplayQuestionNumber: settings.autoplayQuestionNumber ?? true,
+      hideStandardTestMode: Boolean(settings.hideStandardTestMode),
     };
     setStorageItem(STORAGE_KEYS.AUDIO_SETTINGS, normalized);
     return normalized;

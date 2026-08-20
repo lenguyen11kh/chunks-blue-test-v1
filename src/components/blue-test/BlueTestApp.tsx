@@ -2,7 +2,7 @@ import { TeacherPreferencesService } from '../../persistence/teacher-preferences
 import React, { useState, useEffect } from 'react';
 import { Learner } from '../../types/common';
 
-import { AudioSettings, BlueAssignment } from '../../types/blue-test';
+import { AudioSettings, BlueAssignment, BlueTestMode } from '../../types/blue-test';
 import { BlueTestStorageAdapter, initializeBlueTestStorage } from '../../persistence/blue-test-storage';
 import { AudioStorageAdapter } from '../../persistence/audio-storage';
 import { stopAllAudio } from '../../audio/audio-service';
@@ -12,9 +12,11 @@ import { BlueTestHistory } from './BlueTestHistory';
 import { BlueTestAnalysis } from './BlueTestAnalysis';
 import { BlueTestFixtureReview } from './BlueTestFixtureReview';
 import { BlueTestAudioManagement } from './BlueTestAudioManagement';
-import { Sparkles, Play, BarChart2, FileSpreadsheet, Settings, History, Volume2, ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react';
+import { CaptainTestRoom } from './captain-module/CaptainTestRoom';
+import { CaptainAnalysisModule } from './captain-module/CaptainAnalysisModule';
+import { Sparkles, Play, BarChart2, FileSpreadsheet, Settings, History, Volume2, ChevronLeft, ChevronRight, PanelLeft, Anchor, ShieldAlert } from 'lucide-react';
 
-export type BlueSubView = 'setup' | 'room' | 'history' | 'analysis' | 'fixture_review' | 'audio_management';
+export type BlueSubView = 'setup' | 'room' | 'history' | 'analysis' | 'fixture_review' | 'audio_management' | 'captain_room' | 'captain_analysis';
 
 const BlueTestAppContent: React.FC = () => {
   const [selectedLearner, setSelectedLearner] = useState<Learner | null>(() => {
@@ -32,7 +34,7 @@ const BlueTestAppContent: React.FC = () => {
   const [isNavCollapsed, setIsNavCollapsed] = useState<boolean>(false);
 
   useEffect(() => {
-    if (currentSubView !== 'room') {
+    if (currentSubView !== 'room' && currentSubView !== 'captain_room') {
       stopAllAudio();
     }
   }, [currentSubView]);
@@ -55,7 +57,8 @@ const BlueTestAppContent: React.FC = () => {
         enableBells: prefs.timerSoundEnabled,
         timerSoundVolume: prefs.timerSoundVolume,
         autoplayChallengeAudio: prefs.autoplayChallengeAudio,
-        timerSoundEnabled: prefs.timerSoundEnabled
+        timerSoundEnabled: prefs.timerSoundEnabled,
+        hideStandardTestMode: Boolean(prefs.hideStandardTestMode),
       }));
       setSyncStatus(prefs.firestoreSynced ? 'synced' : 'local_only');
     }).catch(() => {
@@ -74,7 +77,8 @@ const BlueTestAppContent: React.FC = () => {
       autoplaySessionIntro: audioSettings.autoplaySessionIntro,
       autoplayChallengeAudio: audioSettings.autoplayChallengeAudio ?? audioSettings.autoplayQuestionCue,
       timerSoundEnabled: audioSettings.timerSoundEnabled ?? audioSettings.enableBells,
-      timerSoundVolume: audioSettings.timerSoundVolume ?? 0.5
+      timerSoundVolume: audioSettings.timerSoundVolume ?? 0.5,
+      hideStandardTestMode: Boolean(audioSettings.hideStandardTestMode),
     };
 
     const result = await TeacherPreferencesService.syncNow(mappedPrefs);
@@ -98,7 +102,8 @@ const BlueTestAppContent: React.FC = () => {
       autoplaySessionIntro: updated.autoplaySessionIntro,
       autoplayChallengeAudio: updated.autoplayChallengeAudio ?? updated.autoplayQuestionCue,
       timerSoundEnabled: updated.timerSoundEnabled ?? updated.enableBells,
-      timerSoundVolume: updated.timerSoundVolume ?? 0.5
+      timerSoundVolume: updated.timerSoundVolume ?? 0.5,
+      hideStandardTestMode: Boolean(updated.hideStandardTestMode),
     }).then(res => {
       setSyncStatus(res.firestoreSynced ? 'synced' : 'local_only');
     }).catch(e => {
@@ -131,7 +136,10 @@ const BlueTestAppContent: React.FC = () => {
     }
   }, [selectedLearner, assignment]);
 
-  const handleSelectAssignmentFromHistory = (ass: BlueAssignment, targetView: 'room' | 'analysis') => {
+  const handleSelectAssignmentFromHistory = (
+    ass: BlueAssignment,
+    targetView: 'room' | 'analysis' | 'captain_room' | 'captain_analysis'
+  ) => {
     setAssignment(ass);
     const l = BlueTestStorageAdapter.getLearner(ass.learnerId);
     if (l) {
@@ -140,21 +148,34 @@ const BlueTestAppContent: React.FC = () => {
     setCurrentSubView(targetView);
   };
 
-  const handleStartTest = (chosenAssignment?: BlueAssignment) => {
-    if (chosenAssignment) {
-      setAssignment(chosenAssignment);
-    } else if (selectedLearner) {
+  const handleStartTest = (chosenAssignment?: BlueAssignment, mode?: BlueTestMode) => {
+    let targetAss = chosenAssignment;
+    if (!targetAss && selectedLearner) {
       const active = BlueTestStorageAdapter.getAssignments().find(
         (a) => a.learnerId === selectedLearner.id && a.status !== 'completed'
       );
       if (active) {
-        setAssignment(active);
+        targetAss = active;
       } else {
-        const newAss = BlueTestStorageAdapter.createNewAssignment(selectedLearner.id);
-        setAssignment(newAss);
+        targetAss = BlueTestStorageAdapter.createNewAssignment(
+          selectedLearner.id,
+          'blue-pkg-v1',
+          'Teacher',
+          mode || 'standard'
+        );
       }
     }
-    setCurrentSubView('room');
+
+    if (targetAss) {
+      if (mode) {
+        targetAss.testMode = mode;
+        BlueTestStorageAdapter.saveAssignment(targetAss);
+      }
+      setAssignment(targetAss);
+    }
+
+    const modeToUse = mode || targetAss?.testMode || 'standard';
+    setCurrentSubView(modeToUse === 'captain' ? 'captain_room' : 'room');
   };
 
   const navItems = [
@@ -162,6 +183,8 @@ const BlueTestAppContent: React.FC = () => {
     { id: 'room' as BlueSubView, label: 'Test Room', icon: Play },
     { id: 'history' as BlueSubView, label: 'History', icon: History },
     { id: 'analysis' as BlueSubView, label: '%i Analysis', icon: BarChart2 },
+    { id: 'captain_room' as BlueSubView, label: '⚓ Captain Test', icon: Anchor },
+    { id: 'captain_analysis' as BlueSubView, label: '📊 Captain Analysis', icon: ShieldAlert },
     { id: 'fixture_review' as BlueSubView, label: '49-Row Fixture', icon: FileSpreadsheet },
     { id: 'audio_management' as BlueSubView, label: 'Audio Studio', icon: Volume2 },
   ];
@@ -271,6 +294,24 @@ const BlueTestAppContent: React.FC = () => {
             learner={selectedLearner!}
             assignment={assignment!}
             onBackToRoom={() => setCurrentSubView('room')}
+          />
+        )}
+
+        {currentSubView === 'captain_room' && (
+          <CaptainTestRoom
+            learner={selectedLearner!}
+            assignment={assignment!}
+            audioSettings={audioSettings}
+            onFinishTest={() => setCurrentSubView('captain_analysis')}
+            onOpenCaptainAnalysis={() => setCurrentSubView('captain_analysis')}
+          />
+        )}
+
+        {currentSubView === 'captain_analysis' && (
+          <CaptainAnalysisModule
+            learner={selectedLearner!}
+            assignment={assignment!}
+            onBackToTest={() => setCurrentSubView('captain_room')}
           />
         )}
 
